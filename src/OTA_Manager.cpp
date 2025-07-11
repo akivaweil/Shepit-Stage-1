@@ -20,6 +20,11 @@ void setupOTA() {
     delay(5000);
     ESP.restart();
   }
+  
+  // Print IP address when connected
+  Serial.begin(115200);
+  Serial.print("WiFi Connected! IP Address: ");
+  Serial.println(WiFi.localIP());
 
   // Configure OTA settings
   ArduinoOTA.setHostname("shepit-s1-cubes");
