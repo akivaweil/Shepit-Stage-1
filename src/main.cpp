@@ -342,15 +342,15 @@ void loop() {
       transitionToState(STATE_CUTTING);
     } 
     else if (isSystemBusy()) {
-      // Check if enough time has passed to allow emergency stop (300ms)
+      // Emergency stop requires a second button press after cycle starts
       unsigned long timeSinceStart = millis() - cycleStartTime;
       Serial.println("System busy - Time since cycle start: " + String(timeSinceStart) + "ms");
       
       if (timeSinceStart >= EMERGENCY_STOP_DELAY_MS) {
-        Serial.println("*** EMERGENCY STOP TRIGGERED ***");
+        Serial.println("*** EMERGENCY STOP TRIGGERED - Button pressed again during operation ***");
         handleEmergencyStop();
       } else {
-        Serial.println("Emergency stop blocked - wait " + String(EMERGENCY_STOP_DELAY_MS - timeSinceStart) + "ms more");
+        Serial.println("Emergency stop blocked - wait " + String(EMERGENCY_STOP_DELAY_MS - timeSinceStart) + "ms more after cycle start");
       }
     }
   }
