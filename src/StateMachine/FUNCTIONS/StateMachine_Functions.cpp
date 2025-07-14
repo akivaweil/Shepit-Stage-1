@@ -10,7 +10,7 @@ SystemState previousSystemState = STATE_IDLE;
 unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
 bool manualMode = false;
-const unsigned long MOTOR_TIMEOUT_MS = 2000; // 2 seconds
+const unsigned long MOTOR_TIMEOUT_MS = 3000; // 3 seconds for sleep mode
 const unsigned long MOTOR_ENABLE_DELAY_MS = 500; // 500ms motor enable delay
 
 // Motor enable delay tracking
@@ -72,12 +72,12 @@ void disableAllMotorsAfterDelay() {
     digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable
     digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
     motorsEnabled = false;
-    Serial.println("All motors DISABLED due to timeout");
+    Serial.println("*** SLEEP MODE - All motors DISABLED after 3 seconds of idle ***");
   }
 }
 
 void checkMotorTimeout() {
-  // Only check timeout in idle state
+  // Sleep mode: disable motors after 3 seconds in idle state
   if (currentSystemState == STATE_IDLE) {
     if (motorsEnabled && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
       disableAllMotorsAfterDelay();

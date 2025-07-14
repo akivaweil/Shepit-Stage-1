@@ -52,21 +52,26 @@ void processSerialCommand(String command) {
     transitionToState(STATE_MANUAL);
   }
   
-  // Motor enable/disable commands (legacy support - motors are permanently enabled)
+  // Motor enable/disable commands (motors now use sleep mode)
   if (command == "enablefeed") {
-    Serial.println("Feed motor is permanently ENABLED");
+    enableAllMotors();
+    Serial.println("Feed motor ENABLED (sleep mode after 3 seconds)");
   }
   else if (command == "disablefeed") {
-    Serial.println("Motors are permanently enabled - cannot disable");
+    disableFeedMotor();
+    Serial.println("Feed motor DISABLED");
   }
   else if (command == "enablecut") {
-    Serial.println("Cut motor is permanently ENABLED");
+    enableAllMotors();
+    Serial.println("Cut motor ENABLED (sleep mode after 3 seconds)");
   }
   else if (command == "disablecut") {
-    Serial.println("Motors are permanently enabled - cannot disable");
+    disableCutMotor();
+    Serial.println("Cut motor DISABLED");
   }
   else if (command == "disableall") {
-    Serial.println("Motors are permanently enabled - cannot disable");
+    disableAllMotorsAfterDelay();
+    Serial.println("All motors DISABLED");
   }
   
   // Feed motor movement commands
@@ -232,10 +237,10 @@ void setup() {
   pinMode(FEED_MOTOR_ENABLE_PIN, OUTPUT);
   pinMode(CUT_MOTOR_ENABLE_PIN, OUTPUT);
   
-  // Enable motors permanently on startup
+  // Enable motors on startup (will enter sleep mode after 3 seconds of idle)
   digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
-  Serial.println("Motors ENABLED permanently on startup");
+  Serial.println("Motors ENABLED on startup - sleep mode after 3 seconds of idle");
   
   // Initialize state machine
   Serial.println("Initializing state machine...");
@@ -355,7 +360,12 @@ void loop() {
   updateStateMachine();
 
   //! ************************************************************************
-  //! STEP 6: SMALL DELAY TO PREVENT WATCHDOG ISSUES
+  //! STEP 6: CHECK MOTOR TIMEOUT FOR SLEEP MODE
+  //! ************************************************************************
+  checkMotorTimeout();
+
+  //! ************************************************************************
+  //! STEP 7: SMALL DELAY TO PREVENT WATCHDOG ISSUES
   //! ************************************************************************
   delay(10);
 }
