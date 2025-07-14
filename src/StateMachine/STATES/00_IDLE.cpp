@@ -6,7 +6,7 @@
 //* ************************ IDLE STATE ***********************************
 //* ************************************************************************
 // The IDLE state is where the system waits for button press or manual commands
-// Motors will disable after 2 seconds of inactivity in this state
+// Motors will disable after 3 seconds of inactivity in this state
 
 void enterIdleState() {
   // Reset manual mode flag
@@ -23,11 +23,11 @@ void enterIdleState() {
   } else {
     Serial.println("System ready - waiting for button press or manual command");
   }
-  Serial.println("Motors are permanently enabled");
+  Serial.println("Motors enabled - will disable after 3 seconds of inactivity");
 }
 
 void updateIdleState() {
-  // Motors are permanently enabled - no timeout checking needed
+  // Motor timeout checking is handled in main loop via checkMotorTimeout()
 }
 
 void exitIdleState() {

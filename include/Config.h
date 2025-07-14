@@ -19,6 +19,11 @@ extern const float cutMotorReturnSpeed;
 extern const float cutMotorReturnAcceleration;
 
 //* ************************************************************************
+//* *********************** TIMEOUT CONFIGURATION **************************
+//* ************************************************************************
+extern const unsigned long motorIdleTimeout;
+
+//* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************
 //* ************************************************************************
 extern const unsigned long buttonDebounceTime;
