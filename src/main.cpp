@@ -24,8 +24,8 @@ FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper = NULL;
 
 // Motor parameters
-const float stepsPerMove = 200.0;
-const float motorSpeed = 1000.0;      // Steps per second
+const float stepsPerMove = 1000.0;
+const float motorSpeed = 500.0;      // Steps per second
 const float motorAcceleration = 2000.0; // Steps per second^2
 
 //* ************************************************************************
@@ -57,6 +57,7 @@ void setup() {
   if (stepper) {
     stepper->move(stepsPerMove);
   }
+  delay(2000);
 }
 
 //* ************************************************************************
@@ -74,6 +75,7 @@ void loop() {
   if (stepper && !stepper->isRunning()) {
     // Motor has completed its 200 steps, start the next movement
     stepper->move(stepsPerMove);
+
   }
 
   //! ************************************************************************
