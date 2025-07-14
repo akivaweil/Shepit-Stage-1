@@ -10,6 +10,7 @@ SystemState previousSystemState = STATE_IDLE;
 unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
 bool manualMode = false;
+const unsigned long MOTOR_TIMEOUT_MS = 2000; // 2 seconds
 const unsigned long MOTOR_ENABLE_DELAY_MS = 500; // 500ms motor enable delay
 
 // Motor enable delay tracking
@@ -78,7 +79,7 @@ void disableAllMotorsAfterDelay() {
 void checkMotorTimeout() {
   // Only check timeout in idle state
   if (currentSystemState == STATE_IDLE) {
-    if (motorsEnabled && (millis() - lastActivityTime >= motorIdleTimeout)) {
+    if (motorsEnabled && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
       disableAllMotorsAfterDelay();
     }
   }
@@ -190,10 +191,8 @@ void initializeStateMachine() {
   
   // Initialize variables
   lastActivityTime = millis();
+  motorsEnabled = true;  // Motors are permanently enabled
   manualMode = false;
-  
-  // Enable motors initially
-  enableAllMotors();
   
   // Start in idle state
   currentSystemState = STATE_IDLE;
