@@ -41,6 +41,11 @@ extern bool waitingForMotorEnable;
 // Cutting state tracking
 extern CuttingPhase currentCuttingPhase;
 
+// Emergency stop tracking
+extern unsigned long cycleStartTime;
+extern bool emergencyStopRequested;
+extern const unsigned long EMERGENCY_STOP_DELAY_MS;
+
 // Motor objects
 extern FastAccelStepper *feedMotor;
 extern FastAccelStepper *cutMotor;
@@ -56,6 +61,7 @@ void transitionToState(SystemState newState);
 String getCurrentStateName();
 bool isSystemIdle();
 bool isSystemBusy();
+void handleEmergencyStop();
 
 // Motor control functions
 void resetMotorTimeout();

@@ -164,10 +164,7 @@ void processSerialCommand(String command) {
   
   // Emergency stop
   else if (command == "stop" || command == "emergency") {
-    if (feedMotor) feedMotor->forceStop();
-    if (cutMotor) cutMotor->forceStop();
-    transitionToState(STATE_IDLE);
-    Serial.println("EMERGENCY STOP - All motors stopped (motors remain enabled)");
+    handleEmergencyStop();
   }
   
   // Run sequence manually
@@ -332,11 +329,24 @@ void loop() {
   button.update();
 
   //! ************************************************************************
-  //! STEP 4: CHECK FOR BUTTON PRESS TO START SEQUENCE
+  //! STEP 4: CHECK FOR BUTTON PRESS TO START SEQUENCE OR EMERGENCY STOP
   //! ************************************************************************
-  if (button.pressed() && isSystemIdle()) {
-    Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
-    transitionToState(STATE_CUTTING);
+  if (button.pressed()) {
+    if (isSystemIdle()) {
+      // Start new cutting cycle
+      Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
+      cycleStartTime = millis();
+      emergencyStopRequested = false;
+      transitionToState(STATE_CUTTING);
+    } 
+    else if (isSystemBusy()) {
+      // Check if enough time has passed to allow emergency stop (300ms)
+      if (millis() - cycleStartTime >= EMERGENCY_STOP_DELAY_MS) {
+        handleEmergencyStop();
+      } else {
+        Serial.println("Emergency stop blocked - wait " + String(EMERGENCY_STOP_DELAY_MS) + "ms after cycle start");
+      }
+    }
   }
 
   //! ************************************************************************

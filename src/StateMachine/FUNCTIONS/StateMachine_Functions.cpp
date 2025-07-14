@@ -20,6 +20,11 @@ bool waitingForMotorEnable = false;
 // Cutting state tracking
 CuttingPhase currentCuttingPhase = CUT_FORWARD_PHASE;
 
+// Emergency stop tracking
+unsigned long cycleStartTime = 0;
+bool emergencyStopRequested = false;
+const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent accidental stops
+
 //* ************************************************************************
 //* *********************** MOTOR ENABLE FUNCTIONS ************************
 //* ************************************************************************
@@ -122,6 +127,20 @@ bool isSystemBusy() {
   return (currentSystemState == STATE_CUTTING || 
           currentSystemState == STATE_RETURNING ||
           currentSystemState == STATE_FEEDING);
+}
+
+void handleEmergencyStop() {
+  // Stop all motors immediately
+  if (feedMotor) feedMotor->forceStop();
+  if (cutMotor) cutMotor->forceStop();
+  
+  // Set emergency stop flag
+  emergencyStopRequested = true;
+  
+  Serial.println("*** EMERGENCY STOP - Returning to home position ***");
+  
+  // Transition directly to IDLE state
+  transitionToState(STATE_IDLE);
 }
 
 void transitionToState(SystemState newState) {

@@ -12,7 +12,17 @@ void enterIdleState() {
   // Reset manual mode flag
   manualMode = false;
   
-  Serial.println("System ready - waiting for button press or manual command");
+  // Check if this was an emergency stop before resetting the flag
+  bool wasEmergencyStop = emergencyStopRequested;
+  
+  // Reset emergency stop flag
+  emergencyStopRequested = false;
+  
+  if (wasEmergencyStop) {
+    Serial.println("Emergency stop complete - system ready");
+  } else {
+    Serial.println("System ready - waiting for button press or manual command");
+  }
   Serial.println("Motors are permanently enabled");
 }
 
