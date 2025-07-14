@@ -11,28 +11,23 @@
         },
         {
             "folderPath": "src/StateMachine/",
-            "color": "foldercolorizer.color_cc00cc",
+            "color": "foldercolorizer.color_9933cc",
             "badge": "🔄"
         },
         {
             "folderPath": "src/StateMachine/STATES/",
             "color": "foldercolorizer.color_ffcc00",
-            "badge": "🔄"
+            "badge": "🎯"
         },
         {
             "folderPath": "src/StateMachine/FUNCTIONS/",
-            "color": "foldercolorizer.color_cc00cc",
-            "badge": "🔄"
+            "color": "foldercolorizer.color_ff6600",
+            "badge": "🛠️"
         },
         {
             "folderPath": "include/",
-            "color": "foldercolorizer.color_ff6600",
-            "badge": "🔌"
-        },
-        {
-            "folderPath": "lib/",
-            "color": "foldercolorizer.color_9900cc",
-            "badge": "��"
+            "color": "foldercolorizer.color_cc0099",
+            "badge": "📁"
         }
     ]
 }
