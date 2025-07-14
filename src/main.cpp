@@ -30,17 +30,30 @@ FastAccelStepper *cutMotor = NULL;
 Bounce2::Button button = Bounce2::Button();
 
 //* ************************************************************************
-//* *********************** SEQUENCE CONTROL ******************************
+//* *********************** STATE MACHINE *********************************
 //* ************************************************************************
-enum SequenceState {
-  IDLE,
-  CUT_FORWARD,
-  CUT_BACKWARD,
-  FEED_FORWARD
+// State enumeration
+enum SystemState {
+  STATE_IDLE = 0,
+  STATE_CUTTING = 1,
+  STATE_FEEDING = 2,
+  STATE_MANUAL = 3
 };
 
-SequenceState currentState = IDLE;
-bool sequenceRunning = false;
+// State machine variables
+SystemState currentSystemState = STATE_IDLE;
+SystemState previousSystemState = STATE_IDLE;
+unsigned long lastActivityTime = 0;
+bool motorsEnabled = false;
+bool manualMode = false;
+const unsigned long MOTOR_TIMEOUT_MS = 2000; // 2 seconds
+
+// Cutting state tracking
+enum CuttingPhase {
+  CUT_FORWARD_PHASE,
+  CUT_BACKWARD_PHASE
+};
+CuttingPhase currentCuttingPhase = CUT_FORWARD_PHASE;
 
 //* ************************************************************************
 //* *********************** SERIAL COMMAND PROCESSING *********************
@@ -51,30 +64,203 @@ bool stringComplete = false;
 //* ************************************************************************
 //* *********************** MOTOR ENABLE FUNCTIONS ************************
 //* ************************************************************************
+
+void resetMotorTimeout() {
+  lastActivityTime = millis();
+}
+
+void enableAllMotors() {
+  if (!motorsEnabled) {
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
+    motorsEnabled = true;
+    Serial.println("All motors ENABLED");
+  }
+  resetMotorTimeout();
+}
+
+void disableAllMotorsAfterDelay() {
+  if (motorsEnabled) {
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
+    motorsEnabled = false;
+    Serial.println("All motors DISABLED due to timeout");
+  }
+}
+
+void checkMotorTimeout() {
+  // Only check timeout in idle state
+  if (currentSystemState == STATE_IDLE) {
+    if (motorsEnabled && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
+      disableAllMotorsAfterDelay();
+    }
+  }
+}
+
+// Individual motor control functions maintained for manual commands
 void enableFeedMotor() {
   digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
-  Serial.println("Feed motor ENABLED");
+  resetMotorTimeout();
 }
 
 void disableFeedMotor() {
   digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable
-  Serial.println("Feed motor DISABLED");
 }
 
 void enableCutMotor() {
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
-  Serial.println("Cut motor ENABLED");
+  resetMotorTimeout();
 }
 
 void disableCutMotor() {
   digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
-  Serial.println("Cut motor DISABLED");
 }
 
-void disableAllMotors() {
-  disableFeedMotor();
-  disableCutMotor();
-  Serial.println("All motors DISABLED");
+//* ************************************************************************
+//* *********************** STATE MACHINE FUNCTIONS **********************
+//* ************************************************************************
+
+String getCurrentStateName() {
+  switch (currentSystemState) {
+    case STATE_IDLE: return "IDLE";
+    case STATE_CUTTING: return "CUTTING";
+    case STATE_FEEDING: return "FEEDING";
+    case STATE_MANUAL: return "MANUAL";
+    default: return "UNKNOWN";
+  }
+}
+
+bool isSystemIdle() {
+  return currentSystemState == STATE_IDLE;
+}
+
+bool isSystemBusy() {
+  return (currentSystemState == STATE_CUTTING || 
+          currentSystemState == STATE_FEEDING);
+}
+
+void transitionToState(SystemState newState) {
+  if (newState != currentSystemState) {
+    Serial.println("*** TRANSITIONING FROM " + getCurrentStateName() + " TO " + 
+                   (newState == STATE_IDLE ? "IDLE" : 
+                    newState == STATE_CUTTING ? "CUTTING" : 
+                    newState == STATE_FEEDING ? "FEEDING" : 
+                    newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN") + " ***");
+    
+    previousSystemState = currentSystemState;
+    currentSystemState = newState;
+    
+    // Reset activity timer on state change
+    resetMotorTimeout();
+    
+    // Handle state-specific initialization
+    switch (currentSystemState) {
+      case STATE_IDLE:
+        manualMode = false;
+        Serial.println("System ready - waiting for button press or manual command");
+        Serial.println("Motors will disable after 2 seconds of inactivity");
+        break;
+        
+      case STATE_CUTTING:
+        enableAllMotors();
+        currentCuttingPhase = CUT_FORWARD_PHASE;
+        if (cutMotor) {
+          Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+          cutMotor->move(cutMotorSteps);
+        }
+        break;
+        
+      case STATE_FEEDING:
+        enableAllMotors();
+        if (feedMotor) {
+          Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
+          feedMotor->move(feedMotorSteps);
+        }
+        break;
+        
+      case STATE_MANUAL:
+        enableAllMotors();
+        manualMode = true;
+        Serial.println("Manual mode active - motors enabled");
+        break;
+    }
+  }
+}
+
+void updateStateMachine() {
+  // Update the current state
+  switch (currentSystemState) {
+    case STATE_IDLE:
+      // Check for motor timeout (2 seconds of inactivity)
+      checkMotorTimeout();
+      break;
+      
+    case STATE_CUTTING:
+      // Reset activity timer to keep motors enabled
+      resetMotorTimeout();
+      
+      // Handle cutting phases
+      switch (currentCuttingPhase) {
+        case CUT_FORWARD_PHASE:
+          // Check if cut motor forward movement is complete
+          if (cutMotor && !cutMotor->isRunning()) {
+            Serial.println("Cut motor forward movement COMPLETE");
+            
+            // Move to backward phase
+            currentCuttingPhase = CUT_BACKWARD_PHASE;
+            
+            // Start cut motor backward movement
+            Serial.println("Starting cut motor backward movement (" + String(cutMotorSteps) + " steps)");
+            cutMotor->move(-cutMotorSteps);
+          }
+          break;
+          
+        case CUT_BACKWARD_PHASE:
+          // Check if cut motor backward movement is complete
+          if (cutMotor && !cutMotor->isRunning()) {
+            Serial.println("Cut motor backward movement COMPLETE");
+            
+            // Cutting sequence complete, transition to feeding
+            transitionToState(STATE_FEEDING);
+          }
+          break;
+      }
+      break;
+      
+    case STATE_FEEDING:
+      // Reset activity timer to keep motors enabled
+      resetMotorTimeout();
+      
+      // Check if feed motor movement is complete
+      if (feedMotor && !feedMotor->isRunning()) {
+        Serial.println("Feed motor forward movement COMPLETE");
+        
+        // Feeding sequence complete, return to idle
+        Serial.println("*** CUTTING CYCLE COMPLETE ***");
+        transitionToState(STATE_IDLE);
+      }
+      break;
+      
+    case STATE_MANUAL:
+      // Reset activity timer to keep motors enabled during manual operations
+      resetMotorTimeout();
+      break;
+  }
+}
+
+void initializeStateMachine() {
+  Serial.println("=== INITIALIZING STATE MACHINE ===");
+  
+  // Initialize variables
+  lastActivityTime = millis();
+  motorsEnabled = false;
+  manualMode = false;
+  
+  // Start in idle state
+  currentSystemState = STATE_IDLE;
+  previousSystemState = STATE_IDLE;
+  
+  Serial.println("State machine initialized - starting in IDLE state");
 }
 
 //* ************************************************************************
@@ -86,34 +272,45 @@ void processSerialCommand(String command) {
   
   Serial.println("Command received: " + command);
   
-  // Motor enable/disable commands
+  // Transition to manual mode for motor commands
+  if (!manualMode && (command.startsWith("feed") || command.startsWith("cut") || 
+                      command == "enablefeed" || command == "disablefeed" ||
+                      command == "enablecut" || command == "disablecut")) {
+    transitionToState(STATE_MANUAL);
+  }
+  
+  // Motor enable/disable commands (legacy support)
   if (command == "enablefeed") {
-    enableFeedMotor();
+    enableAllMotors();
+    Serial.println("Feed motor ENABLED via manual command");
   }
   else if (command == "disablefeed") {
     disableFeedMotor();
+    Serial.println("Feed motor DISABLED via manual command");
   }
   else if (command == "enablecut") {
-    enableCutMotor();
+    enableAllMotors();
+    Serial.println("Cut motor ENABLED via manual command");
   }
   else if (command == "disablecut") {
     disableCutMotor();
+    Serial.println("Cut motor DISABLED via manual command");
   }
   else if (command == "disableall") {
-    disableAllMotors();
+    disableAllMotorsAfterDelay();
   }
   
   // Feed motor movement commands
   else if (command == "feedforward") {
     if (feedMotor) {
-      enableFeedMotor();
+      enableAllMotors();
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor moving forward");
     }
   }
   else if (command == "feedbackward") {
     if (feedMotor) {
-      enableFeedMotor();
+      enableAllMotors();
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor moving backward");
     }
@@ -128,14 +325,14 @@ void processSerialCommand(String command) {
   // Cut motor movement commands
   else if (command == "cutforward") {
     if (cutMotor) {
-      enableCutMotor();
+      enableAllMotors();
       cutMotor->move(cutMotorSteps);
       Serial.println("Cut motor moving forward");
     }
   }
   else if (command == "cutbackward") {
     if (cutMotor) {
-      enableCutMotor();
+      enableAllMotors();
       cutMotor->move(-cutMotorSteps);
       Serial.println("Cut motor moving backward");
     }
@@ -152,7 +349,7 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
     if (feedMotor && steps != 0) {
-      enableFeedMotor();
+      enableAllMotors();
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
     }
@@ -161,7 +358,7 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(3);
     float steps = stepStr.toFloat();
     if (cutMotor && steps != 0) {
-      enableCutMotor();
+      enableAllMotors();
       cutMotor->move(steps);
       Serial.println("Cut motor moving " + String(steps) + " steps");
     }
@@ -188,37 +385,39 @@ void processSerialCommand(String command) {
   // Status commands
   else if (command == "status") {
     Serial.println("=== SYSTEM STATUS ===");
+    Serial.println("Current state: " + getCurrentStateName());
+    Serial.println("Motors enabled: " + String(motorsEnabled));
+    Serial.println("Manual mode: " + String(manualMode));
     Serial.println("Feed motor running: " + String(feedMotor ? feedMotor->isRunning() : false));
     Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
-    Serial.println("Sequence running: " + String(sequenceRunning));
-    Serial.println("Current state: " + String(currentState));
+    Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
   }
   
   // Emergency stop
   else if (command == "stop" || command == "emergency") {
     if (feedMotor) feedMotor->forceStop();
     if (cutMotor) cutMotor->forceStop();
-    disableAllMotors();
-    sequenceRunning = false;
-    currentState = IDLE;
+    disableAllMotorsAfterDelay();
+    transitionToState(STATE_IDLE);
     Serial.println("EMERGENCY STOP - All motors stopped and disabled");
   }
   
   // Run sequence manually
   else if (command == "sequence") {
-    if (!sequenceRunning) {
+    if (isSystemIdle()) {
       Serial.println("Starting manual sequence...");
-      sequenceRunning = true;
-      currentState = CUT_FORWARD;
-      enableCutMotor();
-      if (cutMotor) {
-        cutMotor->move(cutMotorSteps);
-      }
+      transitionToState(STATE_CUTTING);
     } else {
-      Serial.println("Sequence already running");
+      Serial.println("Sequence already running - current state: " + getCurrentStateName());
     }
+  }
+  
+  // Return to idle from manual mode
+  else if (command == "idle") {
+    transitionToState(STATE_IDLE);
+    Serial.println("Returning to idle state");
   }
   
   // Help command
@@ -264,14 +463,15 @@ void setup() {
   Serial.println("OTA initialization complete");
 
   //! ************************************************************************
-  //! STEP 3: INITIALIZE ENABLE PINS
+  //! STEP 3: INITIALIZE ENABLE PINS AND STATE MACHINE
   //! ************************************************************************
   Serial.println("Setting up motor enable pins...");
   pinMode(FEED_MOTOR_ENABLE_PIN, OUTPUT);
   pinMode(CUT_MOTOR_ENABLE_PIN, OUTPUT);
   
-  // Disable all motors initially
-  disableAllMotors();
+  // Initialize state machine
+  Serial.println("Initializing state machine...");
+  initializeStateMachine();
 
   //! ************************************************************************
   //! STEP 4: INITIALIZE BUTTON WITH PULLDOWN (ACTIVE HIGH)
@@ -363,79 +563,15 @@ void loop() {
   //! ************************************************************************
   //! STEP 4: CHECK FOR BUTTON PRESS TO START SEQUENCE
   //! ************************************************************************
-  if (button.pressed() && !sequenceRunning) {
+  if (button.pressed() && isSystemIdle()) {
     Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
-    
-    // Start the sequence
-    sequenceRunning = true;
-    currentState = CUT_FORWARD;
-    
-    // Enable cut motor and begin forward movement
-    enableCutMotor();
-    if (cutMotor) {
-      Serial.println("Starting cut motor forward movement (500 steps)");
-      cutMotor->move(cutMotorSteps);
-    }
+    transitionToState(STATE_CUTTING);
   }
 
   //! ************************************************************************
-  //! STEP 5: HANDLE SEQUENCE STATE MACHINE
+  //! STEP 5: UPDATE STATE MACHINE
   //! ************************************************************************
-  if (sequenceRunning) {
-    switch (currentState) {
-      case CUT_FORWARD:
-        // Check if cut motor forward movement is complete
-        if (cutMotor && !cutMotor->isRunning()) {
-          Serial.println("Cut motor forward movement COMPLETE");
-          currentState = CUT_BACKWARD;
-          
-          // Start cut motor backward movement
-          Serial.println("Starting cut motor backward movement (500 steps)");
-          cutMotor->move(-cutMotorSteps);
-        }
-        break;
-
-      case CUT_BACKWARD:
-        // Check if cut motor backward movement is complete
-        if (cutMotor && !cutMotor->isRunning()) {
-          Serial.println("Cut motor backward movement COMPLETE");
-          
-          // Disable cut motor and enable feed motor
-          disableCutMotor();
-          enableFeedMotor();
-          
-          currentState = FEED_FORWARD;
-          
-          // Start feed motor forward movement
-          if (feedMotor) {
-            Serial.println("Starting feed motor forward movement (200 steps)");
-            feedMotor->move(feedMotorSteps);
-          }
-        }
-        break;
-
-      case FEED_FORWARD:
-        // Check if feed motor movement is complete
-        if (feedMotor && !feedMotor->isRunning()) {
-          Serial.println("Feed motor forward movement COMPLETE");
-          
-          // Disable feed motor
-          disableFeedMotor();
-          
-          // Sequence complete, return to idle
-          currentState = IDLE;
-          sequenceRunning = false;
-          
-          Serial.println("*** SEQUENCE COMPLETE - READY FOR NEXT BUTTON PRESS ***");
-        }
-        break;
-
-      case IDLE:
-        // Should not reach here during sequence
-        Serial.println("ERROR: Reached IDLE state during sequence");
-        break;
-    }
-  }
+  updateStateMachine();
 
   //! ************************************************************************
   //! STEP 6: SMALL DELAY TO PREVENT WATCHDOG ISSUES
