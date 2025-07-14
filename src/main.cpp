@@ -47,6 +47,11 @@ unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
 bool manualMode = false;
 const unsigned long MOTOR_TIMEOUT_MS = 2000; // 2 seconds
+const unsigned long MOTOR_ENABLE_DELAY_MS = 500; // 500ms motor enable delay
+
+// Motor enable delay tracking
+unsigned long motorEnableStartTime = 0;
+bool waitingForMotorEnable = false;
 
 // Cutting state tracking
 enum CuttingPhase {
@@ -77,6 +82,30 @@ void enableAllMotors() {
     Serial.println("All motors ENABLED");
   }
   resetMotorTimeout();
+}
+
+void enableAllMotorsWithDelay() {
+  if (!motorsEnabled) {
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
+    motorsEnabled = true;
+    waitingForMotorEnable = true;
+    motorEnableStartTime = millis();
+    Serial.println("All motors ENABLED - waiting 500ms for stabilization");
+  }
+  resetMotorTimeout();
+}
+
+bool isMotorEnableDelayComplete() {
+  if (waitingForMotorEnable) {
+    if (millis() - motorEnableStartTime >= MOTOR_ENABLE_DELAY_MS) {
+      waitingForMotorEnable = false;
+      Serial.println("Motor enable delay complete - ready for movement");
+      return true;
+    }
+    return false;
+  }
+  return true; // No delay needed
 }
 
 void disableAllMotorsAfterDelay() {
@@ -162,20 +191,14 @@ void transitionToState(SystemState newState) {
         break;
         
       case STATE_CUTTING:
-        enableAllMotors();
+        enableAllMotorsWithDelay();
         currentCuttingPhase = CUT_FORWARD_PHASE;
-        if (cutMotor) {
-          Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
-          cutMotor->move(cutMotorSteps);
-        }
+        // Movement will start after delay is complete
         break;
         
       case STATE_FEEDING:
-        enableAllMotors();
-        if (feedMotor) {
-          Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
-          feedMotor->move(feedMotorSteps);
-        }
+        enableAllMotorsWithDelay();
+        // Movement will start after delay is complete
         break;
         
       case STATE_MANUAL:
@@ -199,6 +222,18 @@ void updateStateMachine() {
       // Reset activity timer to keep motors enabled
       resetMotorTimeout();
       
+      // Wait for motor enable delay before starting movement
+      if (waitingForMotorEnable) {
+        if (isMotorEnableDelayComplete()) {
+          // Start the first movement after delay
+          if (cutMotor && currentCuttingPhase == CUT_FORWARD_PHASE) {
+            Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+            cutMotor->move(cutMotorSteps);
+          }
+        }
+        break;
+      }
+      
       // Handle cutting phases
       switch (currentCuttingPhase) {
         case CUT_FORWARD_PHASE:
@@ -209,7 +244,7 @@ void updateStateMachine() {
             // Move to backward phase
             currentCuttingPhase = CUT_BACKWARD_PHASE;
             
-            // Start cut motor backward movement
+            // Start cut motor backward movement (no delay needed for subsequent moves)
             Serial.println("Starting cut motor backward movement (" + String(cutMotorSteps) + " steps)");
             cutMotor->move(-cutMotorSteps);
           }
@@ -230,6 +265,18 @@ void updateStateMachine() {
     case STATE_FEEDING:
       // Reset activity timer to keep motors enabled
       resetMotorTimeout();
+      
+      // Wait for motor enable delay before starting movement
+      if (waitingForMotorEnable) {
+        if (isMotorEnableDelayComplete()) {
+          // Start the feed movement after delay
+          if (feedMotor) {
+            Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
+            feedMotor->move(feedMotorSteps);
+          }
+        }
+        break;
+      }
       
       // Check if feed motor movement is complete
       if (feedMotor && !feedMotor->isRunning()) {
@@ -388,6 +435,10 @@ void processSerialCommand(String command) {
     Serial.println("Current state: " + getCurrentStateName());
     Serial.println("Motors enabled: " + String(motorsEnabled));
     Serial.println("Manual mode: " + String(manualMode));
+    Serial.println("Waiting for motor enable: " + String(waitingForMotorEnable));
+    if (waitingForMotorEnable) {
+      Serial.println("Motor enable delay remaining: " + String(MOTOR_ENABLE_DELAY_MS - (millis() - motorEnableStartTime)) + "ms");
+    }
     Serial.println("Feed motor running: " + String(feedMotor ? feedMotor->isRunning() : false));
     Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
@@ -494,8 +545,8 @@ void setup() {
     feedMotor->setDirectionPin(FEED_MOTOR_DIR_PIN);
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
-    // Enable auto-enable for smoother operation
-    feedMotor->setAutoEnable(true);
+    // Disable auto-enable since we handle it manually with delay
+    feedMotor->setAutoEnable(false);
     // Set current position to 0 for reference
     feedMotor->setCurrentPosition(0);
     Serial.println("Feed motor configured successfully");
@@ -512,8 +563,8 @@ void setup() {
     cutMotor->setDirectionPin(CUT_MOTOR_DIR_PIN);
     cutMotor->setSpeedInHz(cutMotorSpeed);
     cutMotor->setAcceleration(cutMotorAcceleration);
-    // Enable auto-enable for smoother operation
-    cutMotor->setAutoEnable(true);
+    // Disable auto-enable since we handle it manually with delay
+    cutMotor->setAutoEnable(false);
     // Set current position to 0 for reference
     cutMotor->setCurrentPosition(0);
     Serial.println("Cut motor configured successfully");

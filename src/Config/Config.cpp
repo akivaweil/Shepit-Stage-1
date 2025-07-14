@@ -10,8 +10,8 @@ const float feedMotorAcceleration = 400.0;   // Steps per second^2 (increased fo
 const float feedMotorSteps = 200.0;           // Steps per move
 
 // Cut motor parameters
-const float cutMotorSpeed = 200.0;            // Steps per second (reduced for smoother operation)
-const float cutMotorAcceleration = 100.0;    // Steps per second^2 (increased for smooth acceleration)
+const float cutMotorSpeed = 500.0;            // Steps per second (reduced for smoother operation)
+const float cutMotorAcceleration = 500.0;    // Steps per second^2 (increased for smooth acceleration)
 const float cutMotorSteps = 200.0;            // Steps per move
 
 //* ************************************************************************
