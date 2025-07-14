@@ -1,0 +1,273 @@
+//* ************************************************************************
+//* ********************* SERIAL MONITOR TEST COMMANDS ********************
+//* ************************************************************************
+// Test commands for the Shepit S1 Cubes dual motor control system
+// Copy and paste these commands into the serial monitor for testing
+
+//* ************************************************************************
+//* *********************** MOTOR ENABLE/DISABLE **************************
+//* ************************************************************************
+
+// Enable individual motors
+enableFeedMotor();
+enableCutMotor();
+
+// Disable individual motors
+disableFeedMotor();
+disableCutMotor();
+
+// Disable all motors
+disableAllMotors();
+
+//* ************************************************************************
+//* *********************** FEED MOTOR TESTS ******************************
+//* ************************************************************************
+
+// Basic feed motor forward movement (200 steps - default)
+feedMotor->move(200);
+
+// Feed motor backward movement
+feedMotor->move(-200);
+
+// Feed motor small movements for precision testing
+feedMotor->move(50);
+feedMotor->move(-50);
+
+// Feed motor larger movements for range testing
+feedMotor->move(500);
+feedMotor->move(-500);
+
+// Feed motor continuous movement tests
+feedMotor->move(1000);
+feedMotor->move(-1000);
+
+// Check if feed motor is running
+feedMotor->isRunning();
+
+// Stop feed motor immediately
+feedMotor->forceStop();
+
+//* ************************************************************************
+//* *********************** CUT MOTOR TESTS *******************************
+//* ************************************************************************
+
+// Basic cut motor forward movement (100 steps - default)
+cutMotor->move(100);
+
+// Cut motor backward movement
+cutMotor->move(-100);
+
+// Cut motor small movements for precision testing
+cutMotor->move(25);
+cutMotor->move(-25);
+
+// Cut motor larger movements for range testing
+cutMotor->move(500);
+cutMotor->move(-500);
+
+// Cut motor continuous movement tests
+cutMotor->move(1000);
+cutMotor->move(-1000);
+
+// Check if cut motor is running
+cutMotor->isRunning();
+
+// Stop cut motor immediately
+cutMotor->forceStop();
+
+//* ************************************************************************
+//* *********************** SPEED AND ACCELERATION TESTS ******************
+//* ************************************************************************
+
+// Test different speeds for feed motor
+feedMotor->setSpeedInHz(100);
+feedMotor->setSpeedInHz(250);
+feedMotor->setSpeedInHz(500);
+feedMotor->setSpeedInHz(750);
+feedMotor->setSpeedInHz(1000);
+
+// Test different speeds for cut motor
+cutMotor->setSpeedInHz(50);
+cutMotor->setSpeedInHz(100);
+cutMotor->setSpeedInHz(200);
+cutMotor->setSpeedInHz(300);
+
+// Test different accelerations for feed motor
+feedMotor->setAcceleration(500);
+feedMotor->setAcceleration(1000);
+feedMotor->setAcceleration(2000);
+feedMotor->setAcceleration(3000);
+
+// Test different accelerations for cut motor
+cutMotor->setAcceleration(50);
+cutMotor->setAcceleration(100);
+cutMotor->setAcceleration(200);
+cutMotor->setAcceleration(300);
+
+//* ************************************************************************
+//* *********************** SIMULTANEOUS MOTOR TESTS **********************
+//* ************************************************************************
+
+// Enable both motors
+enableFeedMotor();
+enableCutMotor();
+
+// Move both motors forward simultaneously
+feedMotor->move(200);
+cutMotor->move(100);
+
+// Move both motors backward simultaneously
+feedMotor->move(-200);
+cutMotor->move(-100);
+
+// Move motors in opposite directions
+feedMotor->move(200);
+cutMotor->move(-100);
+
+// Move motors in opposite directions (reversed)
+feedMotor->move(-200);
+cutMotor->move(100);
+
+//* ************************************************************************
+//* *********************** SEQUENCE TESTING ******************************
+//* ************************************************************************
+
+// Manual sequence replication (as per main.cpp logic):
+// 1. Cut motor forward 500 steps
+enableCutMotor();
+cutMotor->move(500);
+
+// 2. Cut motor backward 500 steps (run after step 1 completes)
+cutMotor->move(-500);
+
+// 3. Feed motor forward 200 steps (run after step 2 completes)
+disableCutMotor();
+enableFeedMotor();
+feedMotor->move(200);
+
+// 4. Cleanup (run after step 3 completes)
+disableFeedMotor();
+
+//* ************************************************************************
+//* *********************** DIAGNOSTIC COMMANDS ***************************
+//* ************************************************************************
+
+// Check current positions
+Serial.print("Feed motor position: ");
+Serial.println(feedMotor->getCurrentPosition());
+Serial.print("Cut motor position: ");
+Serial.println(cutMotor->getCurrentPosition());
+
+// Check if motors are running
+Serial.print("Feed motor running: ");
+Serial.println(feedMotor->isRunning());
+Serial.print("Cut motor running: ");
+Serial.println(cutMotor->isRunning());
+
+// Check motor speeds
+Serial.print("Feed motor speed: ");
+Serial.println(feedMotor->getSpeedInHz());
+Serial.print("Cut motor speed: ");
+Serial.println(cutMotor->getSpeedInHz());
+
+// System status
+Serial.println("=== SYSTEM STATUS ===");
+Serial.print("Sequence running: ");
+Serial.println(sequenceRunning);
+Serial.print("Current state: ");
+Serial.println(currentState);
+
+//* ************************************************************************
+//* *********************** EMERGENCY COMMANDS ****************************
+//* ************************************************************************
+
+// Emergency stop all motors
+feedMotor->forceStop();
+cutMotor->forceStop();
+disableAllMotors();
+
+// System reset (software restart)
+ESP.restart();
+
+//* ************************************************************************
+//* *********************** BUTTON TESTING ********************************
+//* ************************************************************************
+
+// Check button state
+Serial.print("Button state: ");
+Serial.println(digitalRead(BUTTON_PIN));
+
+// Force button update
+button.update();
+
+// Check if button is pressed
+Serial.print("Button pressed: ");
+Serial.println(button.pressed());
+
+//* ************************************************************************
+//* *********************** CONFIGURATION VALUES **************************
+//* ************************************************************************
+
+// Display current configuration values
+Serial.println("=== MOTOR CONFIGURATION ===");
+Serial.print("Feed motor speed: ");
+Serial.println(feedMotorSpeed);
+Serial.print("Feed motor acceleration: ");
+Serial.println(feedMotorAcceleration);
+Serial.print("Feed motor steps: ");
+Serial.println(feedMotorSteps);
+
+Serial.print("Cut motor speed: ");
+Serial.println(cutMotorSpeed);
+Serial.print("Cut motor acceleration: ");
+Serial.println(cutMotorAcceleration);
+Serial.print("Cut motor steps: ");
+Serial.println(cutMotorSteps);
+
+Serial.print("Button debounce time: ");
+Serial.println(buttonDebounceTime);
+
+//* ************************************************************************
+//* *********************** WIFI AND OTA TESTING **************************
+//* ************************************************************************
+
+// Check WiFi status
+Serial.print("WiFi status: ");
+Serial.println(WiFi.status());
+Serial.print("IP address: ");
+Serial.println(WiFi.localIP());
+
+// Handle OTA (should be called regularly)
+handleOTA();
+
+//* ************************************************************************
+//* *********************** USAGE NOTES ***********************************
+//* ************************************************************************
+/*
+IMPORTANT USAGE NOTES:
+
+1. Always enable motors before moving them
+2. Check if motors are running before starting new movements
+3. Use forceStop() for emergency stops
+4. Monitor serial output for motor status updates
+5. Remember that enable pins are ACTIVE LOW
+6. Button is configured as ACTIVE HIGH with pulldown
+7. Motors use FastAccelStepper library - movements are non-blocking
+8. Sequence state machine runs automatically when button is pressed
+9. OTA updates are handled automatically in main loop
+10. Serial baud rate is 115200
+
+SAFETY REMINDERS:
+- Always disable motors when not in use
+- Use emergency stop commands if needed
+- Check motor positions before large movements
+- Monitor for overheating during continuous operation
+- Ensure adequate power supply for dual motor operation
+
+TROUBLESHOOTING:
+- If motors don't move, check enable pins
+- If movements are jerky, adjust acceleration values
+- If motors miss steps, reduce speed or increase acceleration
+- If button doesn't respond, check debounce timing
+- If OTA fails, check WiFi connection and IP address
+*/ 

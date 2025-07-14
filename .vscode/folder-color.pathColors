@@ -3,5 +3,10 @@
         "folderPath": "src/Config/",
         "color": "foldercolorizer.color_00cc33",
         "badge": "⚙️"
+    },
+    {
+        "folderPath": "src/Test_Commands.txt",
+        "color": "foldercolorizer.color_ffcc00",
+        "badge": "🧪"
     }
 ] 
