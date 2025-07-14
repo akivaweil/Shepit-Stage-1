@@ -6,29 +6,37 @@
 //* ************************ CUTTING STATE ********************************
 //* ************************************************************************
 // The CUTTING state handles the cut motor forward and backward movements
-// Motors are enabled with delay and stay enabled throughout the entire sequence
+// Motors are enabled with delay to ensure proper wake-up from sleep mode
 
 void enterCuttingState() {
-  // Motors are permanently enabled - start cut motor forward movement immediately
-  if (cutMotor) {
-    Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
-    cutMotor->move(cutMotorSteps);
-  }
+  // Enable motors with delay to ensure proper wake-up from sleep mode
+  enableAllMotorsWithDelay();
 }
 
 void updateCuttingState() {
-  // Motors are permanently enabled - no timeout management needed
+  // Wait for motor enable delay to complete before starting movement
+  if (!isMotorEnableDelayComplete()) {
+    return; // Still waiting for motor stabilization
+  }
   
-  // Check if cut motor forward movement is complete
+  // Start cut motor movement if not already running
   if (cutMotor && !cutMotor->isRunning()) {
-    Serial.println("Cut motor forward movement COMPLETE");
-    
-    // Cutting sequence complete, transition to returning
-    transitionToState(STATE_RETURNING);
+    // Check if this is the initial movement start
+    if (cutMotor->getCurrentPosition() == cutMotor->targetPos()) {
+      // Motor hasn't started moving yet, start the movement
+      Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+      cutMotor->move(cutMotorSteps);
+    } else {
+      // Movement was already in progress and now complete
+      Serial.println("Cut motor forward movement COMPLETE");
+      
+      // Cutting sequence complete, transition to returning
+      transitionToState(STATE_RETURNING);
+    }
   }
 }
 
 void exitCuttingState() {
-  // Motors stay enabled for the feeding state
+  // Motors stay enabled for the next state
   // No need to disable motors here
 } 
