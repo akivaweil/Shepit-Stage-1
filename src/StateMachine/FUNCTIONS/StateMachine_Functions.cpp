@@ -20,6 +20,10 @@ bool waitingForMotorEnable = false;
 // Cutting state tracking
 CuttingPhase currentCuttingPhase = CUT_FORWARD_PHASE;
 
+// Feeding state tracking
+FeedingPhase currentFeedingPhase = FEED_FORWARD_PHASE;
+unsigned long feedReturnDelayStartTime = 0;
+
 // Emergency stop tracking
 unsigned long cycleStartTime = 0;
 bool emergencyStopRequested = false;
