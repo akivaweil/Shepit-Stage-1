@@ -23,13 +23,6 @@ enum CuttingPhase {
   CUT_BACKWARD_PHASE
 };
 
-// Feeding phase enumeration
-enum FeedingPhase {
-  FEED_FORWARD_PHASE,
-  FEED_WAITING_PHASE,
-  FEED_RETURN_PHASE
-};
-
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
 //* ************************************************************************
@@ -47,10 +40,6 @@ extern bool waitingForMotorEnable;
 
 // Cutting state tracking
 extern CuttingPhase currentCuttingPhase;
-
-// Feeding state tracking
-extern FeedingPhase currentFeedingPhase;
-extern unsigned long feedReturnDelayStartTime;
 
 // Emergency stop tracking
 extern unsigned long cycleStartTime;

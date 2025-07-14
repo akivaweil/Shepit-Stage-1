@@ -9,9 +9,8 @@ const float feedMotorSpeed = 2000.0;           // Steps per second
 const float feedMotorAcceleration = 2000.0;   // Steps per second^2 (increased for smoother acceleration)
 const float feedMotorSteps =  750;           // Steps per move
 
-// Feed motor return parameters
-const unsigned long feedReturnDelayMs = 5000;  // 5 second delay before returning
-const float feedMotorReturnSteps = -750.0;     // Return the same distance (negative for backward movement)
+// Feed motor pullback parameters (for RETURNING state)
+const float feedMotorPullbackSteps = 20.0;     // Steps to pull back during return
 
 // Cut motor parameters
 const float cutMotorSpeed = 5000.0;            // Steps per second (reduced for smoother operation)

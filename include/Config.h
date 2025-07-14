@@ -9,9 +9,8 @@ extern const float feedMotorSpeed;
 extern const float feedMotorAcceleration;
 extern const float feedMotorSteps;
 
-// Feed motor return parameters  
-extern const unsigned long feedReturnDelayMs;
-extern const float feedMotorReturnSteps;
+// Feed motor pullback parameters (for RETURNING state)
+extern const float feedMotorPullbackSteps;
 
 // Cut motor parameters
 extern const float cutMotorSpeed;
