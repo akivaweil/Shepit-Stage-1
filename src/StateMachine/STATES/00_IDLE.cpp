@@ -12,9 +12,6 @@ void enterIdleState() {
   // Reset manual mode flag
   manualMode = false;
   
-  // Reset cutting phase to ensure clean start for next cycle
-  currentCuttingPhase = CUT_FORWARD_PHASE;
-  
   Serial.println("System ready - waiting for button press or manual command");
   Serial.println("Motors are permanently enabled");
 }

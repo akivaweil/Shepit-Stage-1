@@ -107,6 +107,7 @@ String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
     case STATE_CUTTING: return "CUTTING";
+    case STATE_RETURNING: return "RETURNING";
     case STATE_FEEDING: return "FEEDING";
     case STATE_MANUAL: return "MANUAL";
     default: return "UNKNOWN";
@@ -119,6 +120,7 @@ bool isSystemIdle() {
 
 bool isSystemBusy() {
   return (currentSystemState == STATE_CUTTING || 
+          currentSystemState == STATE_RETURNING ||
           currentSystemState == STATE_FEEDING);
 }
 
@@ -127,6 +129,7 @@ void transitionToState(SystemState newState) {
     Serial.println("*** TRANSITIONING FROM " + getCurrentStateName() + " TO " + 
                    (newState == STATE_IDLE ? "IDLE" : 
                     newState == STATE_CUTTING ? "CUTTING" : 
+                    newState == STATE_RETURNING ? "RETURNING" :
                     newState == STATE_FEEDING ? "FEEDING" : 
                     newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN") + " ***");
     
@@ -134,6 +137,7 @@ void transitionToState(SystemState newState) {
     switch (currentSystemState) {
       case STATE_IDLE: exitIdleState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
+      case STATE_RETURNING: exitReturningState(); break;
       case STATE_FEEDING: exitFeedingState(); break;
       case STATE_MANUAL: exitManualState(); break;
     }
@@ -145,6 +149,7 @@ void transitionToState(SystemState newState) {
     switch (currentSystemState) {
       case STATE_IDLE: enterIdleState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
+      case STATE_RETURNING: enterReturningState(); break;
       case STATE_FEEDING: enterFeedingState(); break;
       case STATE_MANUAL: enterManualState(); break;
     }
@@ -156,6 +161,7 @@ void updateStateMachine() {
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
+    case STATE_RETURNING: updateReturningState(); break;
     case STATE_FEEDING: updateFeedingState(); break;
     case STATE_MANUAL: updateManualState(); break;
   }

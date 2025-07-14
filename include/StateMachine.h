@@ -12,11 +12,12 @@
 enum SystemState {
   STATE_IDLE = 0,
   STATE_CUTTING = 1,
-  STATE_FEEDING = 2,
-  STATE_MANUAL = 3
+  STATE_RETURNING = 2,
+  STATE_FEEDING = 3,
+  STATE_MANUAL = 4
 };
 
-// Cutting phase enumeration
+// Cutting phase enumeration (no longer used - kept for compatibility)
 enum CuttingPhase {
   CUT_FORWARD_PHASE,
   CUT_BACKWARD_PHASE
@@ -76,6 +77,10 @@ void exitIdleState();
 void enterCuttingState();
 void updateCuttingState();
 void exitCuttingState();
+
+void enterReturningState();
+void updateReturningState();
+void exitReturningState();
 
 void enterFeedingState();
 void updateFeedingState();
