@@ -10,16 +10,16 @@ const float feedMotorAcceleration = 300.0;   // Steps per second^2 (increased fo
 const float feedMotorSteps = 50.0;           // Steps per move
 
 // Cut motor parameters
-const float cutMotorSpeed = 200.0;            // Steps per second (reduced for smoother operation)
-const float cutMotorAcceleration = 300.0;    // Steps per second^2 (increased for smooth acceleration)
-const float cutMotorSteps = 100.0;            // Steps per move
+const float cutMotorSpeed = 1000.0;            // Steps per second (reduced for smoother operation)
+const float cutMotorAcceleration = 1500.0;    // Steps per second^2 (increased for smooth acceleration)
+const float cutMotorSteps = 800.0;            // Steps per move
 
 // Cut motor return parameters (for RETURNING state)
-const float cutMotorReturnSpeed = 500.0;      // Steps per second (slower for return movement)
-const float cutMotorReturnAcceleration = 500.0; // Steps per second^2 (gentler acceleration for return)
+const float cutMotorReturnSpeed = 1000.0;      // Steps per second (slower for return movement)
+const float cutMotorReturnAcceleration = 1500.0; // Steps per second^2 (gentler acceleration for return)
 
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************
 //* ************************************************************************
 // Button debounce time in milliseconds
-const unsigned long buttonDebounceTime = 50; 
+const unsigned long buttonDebounceTime = 20; 
