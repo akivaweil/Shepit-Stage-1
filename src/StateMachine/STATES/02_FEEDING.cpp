@@ -9,28 +9,15 @@
 // Motors remain enabled from the cutting state (no additional delay needed)
 
 void enterFeedingState() {
-  // Motors are already enabled from cutting state
-  // But we still call this to ensure they're enabled if coming from elsewhere
-  enableAllMotorsWithDelay();
-  
-  // Movement will start after delay is complete in updateFeedingState()
+  // Motors are permanently enabled - start feed movement immediately
+  if (feedMotor) {
+    Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
+    feedMotor->move(feedMotorSteps);
+  }
 }
 
 void updateFeedingState() {
-  // Reset activity timer to keep motors enabled
-  resetMotorTimeout();
-  
-  // Wait for motor enable delay before starting movement
-  if (waitingForMotorEnable) {
-    if (isMotorEnableDelayComplete()) {
-      // Start the feed movement after delay
-      if (feedMotor) {
-        Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
-        feedMotor->move(feedMotorSteps);
-      }
-    }
-    return;
-  }
+  // Motors are permanently enabled - no timeout management needed
   
   // Check if feed motor movement is complete
   if (feedMotor && !feedMotor->isRunning()) {

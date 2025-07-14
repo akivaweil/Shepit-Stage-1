@@ -52,38 +52,32 @@ void processSerialCommand(String command) {
     transitionToState(STATE_MANUAL);
   }
   
-  // Motor enable/disable commands (legacy support)
+  // Motor enable/disable commands (legacy support - motors are permanently enabled)
   if (command == "enablefeed") {
-    enableAllMotors();
-    Serial.println("Feed motor ENABLED via manual command");
+    Serial.println("Feed motor is permanently ENABLED");
   }
   else if (command == "disablefeed") {
-    disableFeedMotor();
-    Serial.println("Feed motor DISABLED via manual command");
+    Serial.println("Motors are permanently enabled - cannot disable");
   }
   else if (command == "enablecut") {
-    enableAllMotors();
-    Serial.println("Cut motor ENABLED via manual command");
+    Serial.println("Cut motor is permanently ENABLED");
   }
   else if (command == "disablecut") {
-    disableCutMotor();
-    Serial.println("Cut motor DISABLED via manual command");
+    Serial.println("Motors are permanently enabled - cannot disable");
   }
   else if (command == "disableall") {
-    disableAllMotorsAfterDelay();
+    Serial.println("Motors are permanently enabled - cannot disable");
   }
   
   // Feed motor movement commands
   else if (command == "feedforward") {
     if (feedMotor) {
-      enableAllMotors();
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor moving forward");
     }
   }
   else if (command == "feedbackward") {
     if (feedMotor) {
-      enableAllMotors();
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor moving backward");
     }
@@ -98,14 +92,12 @@ void processSerialCommand(String command) {
   // Cut motor movement commands
   else if (command == "cutforward") {
     if (cutMotor) {
-      enableAllMotors();
       cutMotor->move(cutMotorSteps);
       Serial.println("Cut motor moving forward");
     }
   }
   else if (command == "cutbackward") {
     if (cutMotor) {
-      enableAllMotors();
       cutMotor->move(-cutMotorSteps);
       Serial.println("Cut motor moving backward");
     }
@@ -122,7 +114,6 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
     if (feedMotor && steps != 0) {
-      enableAllMotors();
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
     }
@@ -131,7 +122,6 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(3);
     float steps = stepStr.toFloat();
     if (cutMotor && steps != 0) {
-      enableAllMotors();
       cutMotor->move(steps);
       Serial.println("Cut motor moving " + String(steps) + " steps");
     }
@@ -176,9 +166,8 @@ void processSerialCommand(String command) {
   else if (command == "stop" || command == "emergency") {
     if (feedMotor) feedMotor->forceStop();
     if (cutMotor) cutMotor->forceStop();
-    disableAllMotorsAfterDelay();
     transitionToState(STATE_IDLE);
-    Serial.println("EMERGENCY STOP - All motors stopped and disabled");
+    Serial.println("EMERGENCY STOP - All motors stopped (motors remain enabled)");
   }
   
   // Run sequence manually
@@ -245,6 +234,11 @@ void setup() {
   Serial.println("Setting up motor enable pins...");
   pinMode(FEED_MOTOR_ENABLE_PIN, OUTPUT);
   pinMode(CUT_MOTOR_ENABLE_PIN, OUTPUT);
+  
+  // Enable motors permanently on startup
+  digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
+  digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
+  Serial.println("Motors ENABLED permanently on startup");
   
   // Initialize state machine
   Serial.println("Initializing state machine...");

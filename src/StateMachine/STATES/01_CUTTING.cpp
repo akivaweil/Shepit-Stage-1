@@ -9,30 +9,20 @@
 // Motors are enabled with delay and stay enabled throughout the entire sequence
 
 void enterCuttingState() {
-  // Enable motors with 500ms delay to prevent jerky movements
-  enableAllMotorsWithDelay();
+  // Motors are permanently enabled - no need to enable them
   
   // Reset cutting phase to forward
   currentCuttingPhase = CUT_FORWARD_PHASE;
   
-  // Movement will start after delay is complete in updateCuttingState()
+  // Start the cut motor forward movement immediately
+  if (cutMotor) {
+    Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+    cutMotor->move(cutMotorSteps);
+  }
 }
 
 void updateCuttingState() {
-  // Reset activity timer to keep motors enabled
-  resetMotorTimeout();
-  
-  // Wait for motor enable delay before starting movement
-  if (waitingForMotorEnable) {
-    if (isMotorEnableDelayComplete()) {
-      // Start the first movement after delay
-      if (cutMotor && currentCuttingPhase == CUT_FORWARD_PHASE) {
-        Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
-        cutMotor->move(cutMotorSteps);
-      }
-    }
-    return;
-  }
+  // Motors are permanently enabled - no timeout management needed
   
   // Handle cutting phases
   switch (currentCuttingPhase) {
@@ -44,7 +34,7 @@ void updateCuttingState() {
         // Move to backward phase
         currentCuttingPhase = CUT_BACKWARD_PHASE;
         
-        // Start cut motor backward movement (no delay needed for subsequent moves)
+        // Start cut motor backward movement
         Serial.println("Starting cut motor backward movement (" + String(cutMotorSteps) + " steps)");
         cutMotor->move(-cutMotorSteps);
       }

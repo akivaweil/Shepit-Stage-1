@@ -9,18 +9,16 @@
 // Motors are enabled immediately (no delay) for responsive manual control
 
 void enterManualState() {
-  // Enable motors immediately for manual commands (no delay)
-  enableAllMotors();
+  // Motors are permanently enabled - no need to enable them
   
   // Set manual mode flag
   manualMode = true;
   
-  Serial.println("Manual mode active - motors enabled");
+  Serial.println("Manual mode active - motors permanently enabled");
 }
 
 void updateManualState() {
-  // Reset activity timer to keep motors enabled during manual operations
-  resetMotorTimeout();
+  // Motors are permanently enabled - no timeout management needed
   
   // Manual state is primarily driven by serial commands
   // The actual motor movements are handled in the serial command processor

@@ -166,7 +166,7 @@ void initializeStateMachine() {
   
   // Initialize variables
   lastActivityTime = millis();
-  motorsEnabled = false;
+  motorsEnabled = true;  // Motors are permanently enabled
   manualMode = false;
   
   // Start in idle state
