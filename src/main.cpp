@@ -294,7 +294,13 @@ void setup() {
     feedMotor->setDirectionPin(FEED_MOTOR_DIR_PIN);
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
+    // Enable auto-enable for smoother operation
+    feedMotor->setAutoEnable(true);
+    // Set current position to 0 for reference
+    feedMotor->setCurrentPosition(0);
     Serial.println("Feed motor configured successfully");
+    Serial.println("Feed motor speed: " + String(feedMotorSpeed) + " Hz");
+    Serial.println("Feed motor acceleration: " + String(feedMotorAcceleration) + " steps/s²");
   } else {
     Serial.println("ERROR: Failed to create feed motor instance");
   }
@@ -306,7 +312,13 @@ void setup() {
     cutMotor->setDirectionPin(CUT_MOTOR_DIR_PIN);
     cutMotor->setSpeedInHz(cutMotorSpeed);
     cutMotor->setAcceleration(cutMotorAcceleration);
+    // Enable auto-enable for smoother operation
+    cutMotor->setAutoEnable(true);
+    // Set current position to 0 for reference
+    cutMotor->setCurrentPosition(0);
     Serial.println("Cut motor configured successfully");
+    Serial.println("Cut motor speed: " + String(cutMotorSpeed) + " Hz");
+    Serial.println("Cut motor acceleration: " + String(cutMotorAcceleration) + " steps/s²");
   } else {
     Serial.println("ERROR: Failed to create cut motor instance");
   }
