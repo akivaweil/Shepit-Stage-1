@@ -43,6 +43,12 @@ SequenceState currentState = IDLE;
 bool sequenceRunning = false;
 
 //* ************************************************************************
+//* *********************** SERIAL COMMAND PROCESSING *********************
+//* ************************************************************************
+String inputString = "";
+bool stringComplete = false;
+
+//* ************************************************************************
 //* *********************** MOTOR ENABLE FUNCTIONS ************************
 //* ************************************************************************
 void enableFeedMotor() {
@@ -69,6 +75,174 @@ void disableAllMotors() {
   disableFeedMotor();
   disableCutMotor();
   Serial.println("All motors DISABLED");
+}
+
+//* ************************************************************************
+//* *********************** SERIAL COMMAND HANDLER ************************
+//* ************************************************************************
+void processSerialCommand(String command) {
+  command.trim();
+  command.toLowerCase();
+  
+  Serial.println("Command received: " + command);
+  
+  // Motor enable/disable commands
+  if (command == "enablefeed") {
+    enableFeedMotor();
+  }
+  else if (command == "disablefeed") {
+    disableFeedMotor();
+  }
+  else if (command == "enablecut") {
+    enableCutMotor();
+  }
+  else if (command == "disablecut") {
+    disableCutMotor();
+  }
+  else if (command == "disableall") {
+    disableAllMotors();
+  }
+  
+  // Feed motor movement commands
+  else if (command == "feedforward") {
+    if (feedMotor) {
+      enableFeedMotor();
+      feedMotor->move(feedMotorSteps);
+      Serial.println("Feed motor moving forward");
+    }
+  }
+  else if (command == "feedbackward") {
+    if (feedMotor) {
+      enableFeedMotor();
+      feedMotor->move(-feedMotorSteps);
+      Serial.println("Feed motor moving backward");
+    }
+  }
+  else if (command == "feedstop") {
+    if (feedMotor) {
+      feedMotor->forceStop();
+      Serial.println("Feed motor stopped");
+    }
+  }
+  
+  // Cut motor movement commands
+  else if (command == "cutforward") {
+    if (cutMotor) {
+      enableCutMotor();
+      cutMotor->move(cutMotorSteps);
+      Serial.println("Cut motor moving forward");
+    }
+  }
+  else if (command == "cutbackward") {
+    if (cutMotor) {
+      enableCutMotor();
+      cutMotor->move(-cutMotorSteps);
+      Serial.println("Cut motor moving backward");
+    }
+  }
+  else if (command == "cutstop") {
+    if (cutMotor) {
+      cutMotor->forceStop();
+      Serial.println("Cut motor stopped");
+    }
+  }
+  
+  // Custom step commands (format: feed500, cut-200, etc.)
+  else if (command.startsWith("feed")) {
+    String stepStr = command.substring(4);
+    float steps = stepStr.toFloat();
+    if (feedMotor && steps != 0) {
+      enableFeedMotor();
+      feedMotor->move(steps);
+      Serial.println("Feed motor moving " + String(steps) + " steps");
+    }
+  }
+  else if (command.startsWith("cut")) {
+    String stepStr = command.substring(3);
+    float steps = stepStr.toFloat();
+    if (cutMotor && steps != 0) {
+      enableCutMotor();
+      cutMotor->move(steps);
+      Serial.println("Cut motor moving " + String(steps) + " steps");
+    }
+  }
+  
+  // Speed commands (format: feedspeed500, cutspeed100)
+  else if (command.startsWith("feedspeed")) {
+    String speedStr = command.substring(9);
+    float speed = speedStr.toFloat();
+    if (feedMotor && speed > 0) {
+      feedMotor->setSpeedInHz(speed);
+      Serial.println("Feed motor speed set to " + String(speed) + " Hz");
+    }
+  }
+  else if (command.startsWith("cutspeed")) {
+    String speedStr = command.substring(8);
+    float speed = speedStr.toFloat();
+    if (cutMotor && speed > 0) {
+      cutMotor->setSpeedInHz(speed);
+      Serial.println("Cut motor speed set to " + String(speed) + " Hz");
+    }
+  }
+  
+  // Status commands
+  else if (command == "status") {
+    Serial.println("=== SYSTEM STATUS ===");
+    Serial.println("Feed motor running: " + String(feedMotor ? feedMotor->isRunning() : false));
+    Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
+    Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
+    Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
+    Serial.println("Sequence running: " + String(sequenceRunning));
+    Serial.println("Current state: " + String(currentState));
+  }
+  
+  // Emergency stop
+  else if (command == "stop" || command == "emergency") {
+    if (feedMotor) feedMotor->forceStop();
+    if (cutMotor) cutMotor->forceStop();
+    disableAllMotors();
+    sequenceRunning = false;
+    currentState = IDLE;
+    Serial.println("EMERGENCY STOP - All motors stopped and disabled");
+  }
+  
+  // Run sequence manually
+  else if (command == "sequence") {
+    if (!sequenceRunning) {
+      Serial.println("Starting manual sequence...");
+      sequenceRunning = true;
+      currentState = CUT_FORWARD;
+      enableCutMotor();
+      if (cutMotor) {
+        cutMotor->move(cutMotorSteps);
+      }
+    } else {
+      Serial.println("Sequence already running");
+    }
+  }
+  
+  // Help command
+  else if (command == "help") {
+    Serial.println("=== AVAILABLE COMMANDS ===");
+    Serial.println("Motor Control:");
+    Serial.println("  enablefeed, disablefeed, enablecut, disablecut, disableall");
+    Serial.println("Basic Movement:");
+    Serial.println("  feedforward, feedbackward, cutforward, cutbackward");
+    Serial.println("  feedstop, cutstop");
+    Serial.println("Custom Steps:");
+    Serial.println("  feed[number] (e.g., feed500, feed-200)");
+    Serial.println("  cut[number] (e.g., cut100, cut-50)");
+    Serial.println("Speed Control:");
+    Serial.println("  feedspeed[number] (e.g., feedspeed500)");
+    Serial.println("  cutspeed[number] (e.g., cutspeed100)");
+    Serial.println("System:");
+    Serial.println("  status, stop, emergency, sequence, help");
+  }
+  
+  else {
+    Serial.println("Unknown command: " + command);
+    Serial.println("Type 'help' for available commands");
+  }
 }
 
 //* ************************************************************************
@@ -138,6 +312,7 @@ void setup() {
   }
 
   Serial.println("=== SYSTEM READY - WAITING FOR BUTTON PRESS ===");
+  Serial.println("Type 'help' for available serial commands");
   delay(1000);
 }
 
@@ -151,12 +326,30 @@ void loop() {
   handleOTA();
 
   //! ************************************************************************
-  //! STEP 2: UPDATE BUTTON STATE
+  //! STEP 2: PROCESS SERIAL COMMANDS
+  //! ************************************************************************
+  while (Serial.available()) {
+    char inChar = (char)Serial.read();
+    if (inChar == '\n') {
+      stringComplete = true;
+    } else {
+      inputString += inChar;
+    }
+  }
+  
+  if (stringComplete) {
+    processSerialCommand(inputString);
+    inputString = "";
+    stringComplete = false;
+  }
+
+  //! ************************************************************************
+  //! STEP 3: UPDATE BUTTON STATE
   //! ************************************************************************
   button.update();
 
   //! ************************************************************************
-  //! STEP 3: CHECK FOR BUTTON PRESS TO START SEQUENCE
+  //! STEP 4: CHECK FOR BUTTON PRESS TO START SEQUENCE
   //! ************************************************************************
   if (button.pressed() && !sequenceRunning) {
     Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
@@ -174,7 +367,7 @@ void loop() {
   }
 
   //! ************************************************************************
-  //! STEP 4: HANDLE SEQUENCE STATE MACHINE
+  //! STEP 5: HANDLE SEQUENCE STATE MACHINE
   //! ************************************************************************
   if (sequenceRunning) {
     switch (currentState) {
@@ -233,7 +426,7 @@ void loop() {
   }
 
   //! ************************************************************************
-  //! STEP 5: SMALL DELAY TO PREVENT WATCHDOG ISSUES
+  //! STEP 6: SMALL DELAY TO PREVENT WATCHDOG ISSUES
   //! ************************************************************************
   delay(10);
 }
