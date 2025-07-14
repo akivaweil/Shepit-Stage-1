@@ -56,7 +56,7 @@ void updateCuttingState() {
         Serial.println("Cut motor backward movement COMPLETE");
         
         // Cutting sequence complete, transition to feeding
-        transitionToState(STATE_FEEDING);
+        transitionToState(STATE_FEEDING);3
       }
       break;
   }
