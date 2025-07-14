@@ -1,0 +1,53 @@
+{
+    "pathColors": [{
+            "folderPath": "src/",
+            "color": "foldercolorizer.color_0066cc",
+            "badge": "🏠"
+        },
+        {
+            "folderPath": "src/Config/",
+            "color": "foldercolorizer.color_00cc33",
+            "badge": "⚙️"
+        },
+        {
+            "folderPath": "src/StateMachine/",
+            "color": "foldercolorizer.color_9933cc",
+            "badge": "🔄"
+        },
+        {
+            "folderPath": "src/StateMachine/STATES/",
+            "color": "foldercolorizer.color_ffcc00",
+            "badge": "🎯"
+        },
+        {
+            "folderPath": "src/StateMachine/FUNCTIONS/",
+            "color": "foldercolorizer.color_ff6600",
+            "badge": "🛠️"
+        },
+        {
+            "folderPath": "include/",
+            "color": "foldercolorizer.color_cc0099",
+            "badge": "📁"
+        },
+        {
+            "folderPath": "lib/",
+            "color": "foldercolorizer.color_9acd32",
+            "badge": "📚"
+        },
+        {
+            "folderPath": "test/",
+            "color": "foldercolorizer.color_ffa500",
+            "badge": "🧪"
+        },
+        {
+            "folderPath": ".pio/",
+            "color": "foldercolorizer.color_808080",
+            "badge": "🔧"
+        },
+        {
+            "folderPath": ".vscode/",
+            "color": "foldercolorizer.color_a9a9a9",
+            "badge": "⚙️"
+        }
+    ]
+}

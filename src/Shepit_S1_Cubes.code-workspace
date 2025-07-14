@@ -5,5 +5,8 @@
 			"path": ".."
 		}
 	],
-    "settings": {}
+    "settings": {
+        "folder-color.enable": true,
+        "folder-color.autoReload": true
+    }
 }
