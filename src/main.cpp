@@ -332,6 +332,8 @@ void loop() {
   //! STEP 4: CHECK FOR BUTTON PRESS TO START SEQUENCE OR EMERGENCY STOP
   //! ************************************************************************
   if (button.pressed()) {
+    Serial.println("Button pressed - Current state: " + getCurrentStateName());
+    
     if (isSystemIdle()) {
       // Start new cutting cycle
       Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
@@ -341,10 +343,14 @@ void loop() {
     } 
     else if (isSystemBusy()) {
       // Check if enough time has passed to allow emergency stop (300ms)
-      if (millis() - cycleStartTime >= EMERGENCY_STOP_DELAY_MS) {
+      unsigned long timeSinceStart = millis() - cycleStartTime;
+      Serial.println("System busy - Time since cycle start: " + String(timeSinceStart) + "ms");
+      
+      if (timeSinceStart >= EMERGENCY_STOP_DELAY_MS) {
+        Serial.println("*** EMERGENCY STOP TRIGGERED ***");
         handleEmergencyStop();
       } else {
-        Serial.println("Emergency stop blocked - wait " + String(EMERGENCY_STOP_DELAY_MS) + "ms after cycle start");
+        Serial.println("Emergency stop blocked - wait " + String(EMERGENCY_STOP_DELAY_MS - timeSinceStart) + "ms more");
       }
     }
   }
