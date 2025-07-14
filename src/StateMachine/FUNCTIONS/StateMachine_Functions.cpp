@@ -105,6 +105,24 @@ void disableCutMotor() {
 }
 
 //* ************************************************************************
+//* *********************** PNEUMATIC CLAMP FUNCTIONS *********************
+//* ************************************************************************
+
+void extendClamp() {
+  digitalWrite(CLAMP_RELAY_PIN, LOW);  // LOW = extended
+  // No serial output during motor movement per user rules
+}
+
+void retractClamp() {
+  digitalWrite(CLAMP_RELAY_PIN, HIGH); // HIGH = retracted  
+  // No serial output during motor movement per user rules
+}
+
+bool isClampRetracted() {
+  return digitalRead(CLAMP_RELAY_PIN) == HIGH;
+}
+
+//* ************************************************************************
 //* *********************** STATE MACHINE FUNCTIONS **********************
 //* ************************************************************************
 

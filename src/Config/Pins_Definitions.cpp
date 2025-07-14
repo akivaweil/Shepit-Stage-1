@@ -15,4 +15,7 @@
 #define CUT_MOTOR_ENABLE_PIN 17
 
 // Button input pin (active high)
-#define BUTTON_PIN 9 
+#define BUTTON_PIN 9
+
+// Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
+#define CLAMP_RELAY_PIN 37 

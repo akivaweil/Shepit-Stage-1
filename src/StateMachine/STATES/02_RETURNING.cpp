@@ -11,6 +11,9 @@
 void enterReturningState() {
   // Motors are permanently enabled - configure motors for return movement
   
+  // Retract clamp before feed motor movement
+  retractClamp();
+  
   //! ************************************************************************
   //! STEP 1: CONFIGURE AND START FEED MOTOR PULLBACK (SIMULTANEOUS)
   //! ************************************************************************
@@ -48,6 +51,9 @@ void updateReturningState() {
   if (feedMotorComplete && cutMotorComplete) {
     Serial.println("Feed motor pullback COMPLETE");
     Serial.println("Cut motor return movement COMPLETE");
+    
+    // Extend clamp now that feed motor movement is complete
+    extendClamp();
     
     // Restore original cut motor settings for future cutting operations
     if (cutMotor) {

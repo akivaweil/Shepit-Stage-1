@@ -36,6 +36,9 @@ Bounce2::Button button = Bounce2::Button();
 String inputString = "";
 bool stringComplete = false;
 
+// Clamp control tracking for manual mode
+static bool previousFeedMotorRunning = false;
+
 //* ************************************************************************
 //* *********************** SERIAL COMMAND HANDLER ************************
 //* ************************************************************************
@@ -74,15 +77,27 @@ void processSerialCommand(String command) {
     Serial.println("All motors DISABLED");
   }
   
+  // Pneumatic clamp commands
+  else if (command == "clampextend") {
+    extendClamp();
+    Serial.println("Pneumatic clamp EXTENDED");
+  }
+  else if (command == "clampretract") {
+    retractClamp();
+    Serial.println("Pneumatic clamp RETRACTED");
+  }
+  
   // Feed motor movement commands
   else if (command == "feedforward") {
     if (feedMotor) {
+      retractClamp(); // Retract clamp before feed motor movement
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor moving forward");
     }
   }
   else if (command == "feedbackward") {
     if (feedMotor) {
+      retractClamp(); // Retract clamp before feed motor movement
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor moving backward");
     }
@@ -119,6 +134,7 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
     if (feedMotor && steps != 0) {
+      retractClamp(); // Retract clamp before feed motor movement
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
     }
@@ -164,6 +180,7 @@ void processSerialCommand(String command) {
     Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
+    Serial.println("Pneumatic clamp: " + String(isClampRetracted() ? "RETRACTED" : "EXTENDED"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
   }
   
@@ -193,6 +210,8 @@ void processSerialCommand(String command) {
     Serial.println("=== AVAILABLE COMMANDS ===");
     Serial.println("Motor Control:");
     Serial.println("  enablefeed, disablefeed, enablecut, disablecut, disableall");
+    Serial.println("Pneumatic Clamp:");
+    Serial.println("  clampextend, clampretract");
     Serial.println("Basic Movement:");
     Serial.println("  feedforward, feedbackward, cutforward, cutbackward");
     Serial.println("  feedstop, cutstop");
@@ -255,7 +274,15 @@ void setup() {
   Serial.println("Button setup complete");
 
   //! ************************************************************************
-  //! STEP 5: INITIALIZE STEPPER MOTOR ENGINE
+  //! STEP 5: INITIALIZE PNEUMATIC CLAMP RELAY
+  //! ************************************************************************
+  Serial.println("Setting up pneumatic clamp relay...");
+  pinMode(CLAMP_RELAY_PIN, OUTPUT);
+  extendClamp(); // Start with clamp extended (ready position)
+  Serial.println("Pneumatic clamp initialized - starting in extended position");
+
+  //! ************************************************************************
+  //! STEP 6: INITIALIZE STEPPER MOTOR ENGINE
   //! ************************************************************************
   Serial.println("Initializing stepper motor engine...");
   engine.init();
@@ -360,12 +387,27 @@ void loop() {
   updateStateMachine();
 
   //! ************************************************************************
-  //! STEP 6: CHECK MOTOR TIMEOUT FOR SLEEP MODE
+  //! STEP 6: MONITOR CLAMP CONTROL FOR MANUAL MODE
+  //! ************************************************************************
+  // Check if feed motor has stopped moving in manual mode and extend clamp
+  if (manualMode && feedMotor) {
+    bool currentFeedMotorRunning = feedMotor->isRunning();
+    
+    // If feed motor was running and now stopped, extend clamp
+    if (previousFeedMotorRunning && !currentFeedMotorRunning) {
+      extendClamp(); // Extend clamp when feed motor stops
+    }
+    
+    previousFeedMotorRunning = currentFeedMotorRunning;
+  }
+
+  //! ************************************************************************
+  //! STEP 7: CHECK MOTOR TIMEOUT FOR SLEEP MODE
   //! ************************************************************************
   checkMotorTimeout();
 
   //! ************************************************************************
-  //! STEP 7: SMALL DELAY TO PREVENT WATCHDOG ISSUES
+  //! STEP 8: SMALL DELAY TO PREVENT WATCHDOG ISSUES
   //! ************************************************************************
   delay(10);
 }

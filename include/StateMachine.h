@@ -75,6 +75,11 @@ void disableFeedMotor();
 void enableCutMotor();
 void disableCutMotor();
 
+// Pneumatic clamp control functions
+void extendClamp();
+void retractClamp();
+bool isClampRetracted();
+
 // Individual state functions
 void enterIdleState();
 void updateIdleState();

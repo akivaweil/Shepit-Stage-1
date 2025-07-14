@@ -20,6 +20,9 @@ void enterFeedingState() {
   // Motors are permanently enabled - start with forward movement phase
   currentFeedingPhase = FEED_FORWARD_PHASE;
   
+  // Retract clamp before feed motor movement
+  retractClamp();
+  
   if (feedMotor) {
     Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
     feedMotor->move(feedMotorSteps);
@@ -50,6 +53,9 @@ void updateFeedingState() {
       //! PHASE 2 COMPLETE: PULLBACK DONE, FEEDING SEQUENCE COMPLETE
       //! ************************************************************************
       Serial.println("Feed motor pullback COMPLETE (" + String(feedMotorPullbackSteps) + " steps)");
+      
+      // Extend clamp now that feed motor movement is complete
+      extendClamp();
       
       // Feeding sequence complete, return to idle
       Serial.println("*** CUTTING CYCLE COMPLETE ***");
