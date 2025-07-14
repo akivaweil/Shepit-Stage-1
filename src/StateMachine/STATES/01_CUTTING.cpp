@@ -5,12 +5,17 @@
 //* ************************************************************************
 //* ************************ CUTTING STATE ********************************
 //* ************************************************************************
-// The CUTTING state handles the cut motor forward and backward movements
+// The CUTTING state handles the cut motor forward movement
 // Motors are enabled with delay to ensure proper wake-up from sleep mode
+
+static bool cutMotorStarted = false;
 
 void enterCuttingState() {
   // Enable motors with delay to ensure proper wake-up from sleep mode
   enableAllMotorsWithDelay();
+  
+  // Reset movement tracking flag
+  cutMotorStarted = false;
 }
 
 void updateCuttingState() {
@@ -19,24 +24,26 @@ void updateCuttingState() {
     return; // Still waiting for motor stabilization
   }
   
-  // Start cut motor movement if not already running
-  if (cutMotor && !cutMotor->isRunning()) {
-    // Check if this is the initial movement start
-    if (cutMotor->getCurrentPosition() == cutMotor->targetPos()) {
-      // Motor hasn't started moving yet, start the movement
-      Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
-      cutMotor->move(cutMotorSteps);
-    } else {
-      // Movement was already in progress and now complete
-      Serial.println("Cut motor forward movement COMPLETE");
-      
-      // Cutting sequence complete, transition to returning
-      transitionToState(STATE_RETURNING);
-    }
+  // Start cut motor movement if not already started
+  if (!cutMotorStarted && cutMotor) {
+    Serial.println("Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+    cutMotor->move(cutMotorSteps);
+    cutMotorStarted = true;
+  }
+  
+  // Check if movement is complete
+  if (cutMotorStarted && cutMotor && !cutMotor->isRunning()) {
+    Serial.println("Cut motor forward movement COMPLETE");
+    
+    // Cutting sequence complete, transition to returning
+    transitionToState(STATE_RETURNING);
   }
 }
 
 void exitCuttingState() {
+  // Reset movement tracking flag for next cycle
+  cutMotorStarted = false;
+  
   // Motors stay enabled for the next state
   // No need to disable motors here
 } 
