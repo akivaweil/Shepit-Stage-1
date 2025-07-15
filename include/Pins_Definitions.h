@@ -6,22 +6,22 @@
 //* ************************************************************************
 
 // Feed motor pins (original motor)
-#define FEED_MOTOR_STEP_PIN 4
-#define FEED_MOTOR_DIR_PIN 5
-#define FEED_MOTOR_ENABLE_PIN 6
+extern const int FEED_MOTOR_STEP_PIN;
+extern const int FEED_MOTOR_DIR_PIN;
+extern const int FEED_MOTOR_ENABLE_PIN;
 
 // Cut motor pins (new motor)
-#define CUT_MOTOR_STEP_PIN 15
-#define CUT_MOTOR_DIR_PIN 16
-#define CUT_MOTOR_ENABLE_PIN 17
+extern const int CUT_MOTOR_STEP_PIN;
+extern const int CUT_MOTOR_DIR_PIN;
+extern const int CUT_MOTOR_ENABLE_PIN;
 
 // Button input pin (active high)
-#define BUTTON_PIN 9
+extern const int BUTTON_PIN;
 
 // Wood detection sensor pin (active LOW - LOW when wood detected)
-#define IS_WOOD_PIN 8
+extern const int IS_WOOD_PIN;
 
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
-#define CLAMP_RELAY_PIN 37
+extern const int CLAMP_RELAY_PIN;
 
 #endif 

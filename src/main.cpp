@@ -182,6 +182,10 @@ void processSerialCommand(String command) {
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
     Serial.println("Pneumatic clamp: " + String(isClampRetracted() ? "RETRACTED" : "EXTENDED"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
+    // Debug wood sensor if in reloading state
+    if (currentSystemState == STATE_RELOADING) {
+      Serial.println("Wood sensor pin 3: " + String(digitalRead(3)));
+    }
   }
   
   // Emergency stop
@@ -206,6 +210,16 @@ void processSerialCommand(String command) {
       transitionToState(STATE_RELOADING);
     } else {
       Serial.println("Cannot start reloading - current state: " + getCurrentStateName());
+    }
+  }
+  
+  // Test wood detection sequence (debug command)
+  else if (command == "testwood") {
+    if (currentSystemState == STATE_RELOADING) {
+      Serial.println("*** MANUALLY TRIGGERING WOOD DETECTION SEQUENCE ***");
+      transitionToState(STATE_CUTTING);
+    } else {
+      Serial.println("Must be in RELOADING state to test wood detection. Current state: " + getCurrentStateName());
     }
   }
   
