@@ -199,6 +199,16 @@ void processSerialCommand(String command) {
     }
   }
   
+  // Start reloading state
+  else if (command == "reloading") {
+    if (isSystemIdle()) {
+      Serial.println("Starting reloading state...");
+      transitionToState(STATE_RELOADING);
+    } else {
+      Serial.println("Cannot start reloading - current state: " + getCurrentStateName());
+    }
+  }
+  
   // Return to idle from manual mode
   else if (command == "idle") {
     transitionToState(STATE_IDLE);
@@ -222,7 +232,7 @@ void processSerialCommand(String command) {
     Serial.println("  feedspeed[number] (e.g., feedspeed500)");
     Serial.println("  cutspeed[number] (e.g., cutspeed100)");
     Serial.println("System:");
-    Serial.println("  status, stop, emergency, sequence, help");
+    Serial.println("  status, stop, emergency, sequence, reloading, help");
   }
   
   else {

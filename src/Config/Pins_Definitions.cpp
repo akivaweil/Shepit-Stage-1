@@ -17,5 +17,8 @@
 // Button input pin (active high)
 #define BUTTON_PIN 9
 
+// Wood detection sensor pin (active LOW - LOW when wood detected)
+#define IS_WOOD_PIN 8
+
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
 #define CLAMP_RELAY_PIN 37 

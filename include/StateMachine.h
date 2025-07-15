@@ -11,10 +11,11 @@
 // State enumeration
 enum SystemState {
   STATE_IDLE = 0,
-  STATE_CUTTING = 1,
-  STATE_RETURNING = 2,
-  STATE_FEEDING = 3,
-  STATE_MANUAL = 4
+  STATE_RELOADING = 1,
+  STATE_CUTTING = 2,
+  STATE_RETURNING = 3,
+  STATE_FEEDING = 4,
+  STATE_MANUAL = 5
 };
 
 // Cutting phase enumeration (no longer used - kept for compatibility)
@@ -84,6 +85,10 @@ bool isClampRetracted();
 void enterIdleState();
 void updateIdleState();
 void exitIdleState();
+
+void enterReloadingState();
+void updateReloadingState();
+void exitReloadingState();
 
 void enterCuttingState();
 void updateCuttingState();

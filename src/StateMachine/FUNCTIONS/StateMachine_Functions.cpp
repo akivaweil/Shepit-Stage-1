@@ -129,6 +129,7 @@ bool isClampRetracted() {
 String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
+    case STATE_RELOADING: return "RELOADING";
     case STATE_CUTTING: return "CUTTING";
     case STATE_RETURNING: return "RETURNING";
     case STATE_FEEDING: return "FEEDING";
@@ -142,7 +143,8 @@ bool isSystemIdle() {
 }
 
 bool isSystemBusy() {
-  return (currentSystemState == STATE_CUTTING || 
+  return (currentSystemState == STATE_RELOADING ||
+          currentSystemState == STATE_CUTTING || 
           currentSystemState == STATE_RETURNING ||
           currentSystemState == STATE_FEEDING);
 }
@@ -165,6 +167,7 @@ void transitionToState(SystemState newState) {
   if (newState != currentSystemState) {
     Serial.println("*** TRANSITIONING FROM " + getCurrentStateName() + " TO " + 
                    (newState == STATE_IDLE ? "IDLE" : 
+                    newState == STATE_RELOADING ? "RELOADING" :
                     newState == STATE_CUTTING ? "CUTTING" : 
                     newState == STATE_RETURNING ? "RETURNING" :
                     newState == STATE_FEEDING ? "FEEDING" : 
@@ -173,6 +176,7 @@ void transitionToState(SystemState newState) {
     // Exit current state
     switch (currentSystemState) {
       case STATE_IDLE: exitIdleState(); break;
+      case STATE_RELOADING: exitReloadingState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
       case STATE_RETURNING: exitReturningState(); break;
       case STATE_FEEDING: exitFeedingState(); break;
@@ -185,6 +189,7 @@ void transitionToState(SystemState newState) {
     // Enter new state
     switch (currentSystemState) {
       case STATE_IDLE: enterIdleState(); break;
+      case STATE_RELOADING: enterReloadingState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
       case STATE_RETURNING: enterReturningState(); break;
       case STATE_FEEDING: enterFeedingState(); break;
@@ -197,6 +202,7 @@ void updateStateMachine() {
   // Update the current state
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
+    case STATE_RELOADING: updateReloadingState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
     case STATE_RETURNING: updateReturningState(); break;
     case STATE_FEEDING: updateFeedingState(); break;
