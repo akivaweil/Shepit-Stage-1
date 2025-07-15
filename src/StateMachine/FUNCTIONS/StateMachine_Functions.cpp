@@ -11,7 +11,7 @@ unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
 bool manualMode = false;
 const unsigned long MOTOR_TIMEOUT_MS = 3000; // 3 seconds for sleep mode
-const unsigned long MOTOR_ENABLE_DELAY_MS = 500; // 500ms motor enable delay
+const unsigned long MOTOR_ENABLE_DELAY_MS = 750; // 750ms motor enable delay
 
 // Motor enable delay tracking
 unsigned long motorEnableStartTime = 0;
