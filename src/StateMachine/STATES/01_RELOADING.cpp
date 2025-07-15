@@ -42,32 +42,16 @@ void enterReloadingState() {
   // Start with clamp extended (ready position)
   extendClamp();
   
-  Serial.println("*** ENTERED RELOADING STATE ***");
-  Serial.println("Wood sensor pin: " + String(IS_WOOD_PIN));
-  Serial.println("Initial pin reading: " + String(digitalRead(IS_WOOD_PIN)));
-  Serial.println("RELOADING state: Waiting for wood detection...");
+  Serial.println("RELOADING: Wood detection active");
 }
 
 void updateReloadingState() {
   // Update wood sensor
   woodSensor.update();
   
-  // Debug: Print sensor state every 1 second (more frequent)
-  static unsigned long lastDebugTime = 0;
-  if (millis() - lastDebugTime >= 1000) {
-    Serial.println("=== RELOADING DEBUG ===");
-    Serial.println("Pin " + String(IS_WOOD_PIN) + " raw = " + String(digitalRead(IS_WOOD_PIN)));
-    Serial.println("woodSensor.read() = " + String(woodSensor.read()));
-    Serial.println("sequenceStarted = " + String(sequenceStarted));
-    Serial.println("cutMotorRunning = " + String(cutMotorRunning));
-    Serial.println("feedMotorMoving = " + String(feedMotorMoving));
-    Serial.println("========================");
-    lastDebugTime = millis();
-  }
-  
   // Check for wood detection (active LOW)
   if (woodSensor.read() == LOW && !sequenceStarted) {
-    Serial.println("*** WOOD DETECTED! STARTING SEQUENCE ***");
+    Serial.println("WOOD DETECTED - Starting sequence");
     // Wood detected - start the sequence
     woodDetected = true;
     sequenceStarted = true;
@@ -77,13 +61,10 @@ void updateReloadingState() {
     enableCutMotor();
     disableFeedMotor(); // Ensure feed motor stays disabled
     cutMotorRunning = true;
-    
-    Serial.println("Cut motor enabled for 3 seconds...");
   }
   
   // Handle cut motor timing (3 second duration)
   if (cutMotorRunning && (millis() - cutMotorStartTime >= 3000)) {
-    Serial.println("*** 3 seconds elapsed - enabling feed motor ***");
     // 3 seconds elapsed - enable feed motor and start movement
     enableFeedMotor();
     cutMotorRunning = false;
@@ -92,22 +73,23 @@ void updateReloadingState() {
     // Retract clamp before feed motor movement
     retractClamp();
     
-    // Move feed motor the specified steps
+    // Configure and move feed motor
     if (feedMotor) {
+      feedMotor->setSpeedInHz(feedMotorSpeed);
+      feedMotor->setAcceleration(feedMotorAcceleration);
       feedMotor->move(feedMotorSteps);
       feedMotorMoving = true;
-      Serial.println("Feed motor enabled and moving " + String(feedMotorSteps) + " steps...");
+      Serial.println("Feed motor moving " + String(feedMotorSteps) + " steps");
     }
   }
   
   // Check if feed motor movement is complete
   if (feedMotorMoving && feedMotor && !feedMotor->isRunning()) {
-    Serial.println("*** Feed movement complete - starting cutting cycle ***");
     // Feed motor movement complete - extend clamp and start cutting cycle
     extendClamp();
     feedMotorMoving = false;
     
-    Serial.println("Feed movement complete. Starting cutting cycle...");
+    Serial.println("Feed complete - Starting cutting cycle");
     
     // Reset activity timer and transition to cutting state
     resetMotorTimeout();
@@ -121,7 +103,4 @@ void exitReloadingState() {
   feedMotorMoving = false;
   woodDetected = false;
   sequenceStarted = false;
-  
-  // Motors will be handled by the target state
-  Serial.println("Exiting RELOADING state");
 } 

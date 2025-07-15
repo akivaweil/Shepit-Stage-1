@@ -33,27 +33,17 @@ void enterIdleState() {
   if (wasEmergencyStop) {
     Serial.println("Emergency stop complete - system ready");
   } else {
-    Serial.println("System ready - waiting for button press or manual command");
+    Serial.println("System ready");
   }
-  Serial.println("Motors enabled - will enter sleep mode after 3 seconds of inactivity");
-  Serial.println("Monitoring wood sensor on pin " + String(IS_WOOD_PIN) + " for automatic reload detection");
 }
 
 void updateIdleState() {
   // Update wood sensor
   idleWoodSensor.update();
   
-  // Debug: Print sensor state every 3 seconds while in IDLE
-  static unsigned long lastIdleDebugTime = 0;
-  if (millis() - lastIdleDebugTime >= 3000) {
-    Serial.println("IDLE: Wood sensor pin " + String(IS_WOOD_PIN) + " = " + String(digitalRead(IS_WOOD_PIN)) + 
-                   ", debounced = " + String(idleWoodSensor.read()));
-    lastIdleDebugTime = millis();
-  }
-  
   // Check for wood detection (active LOW - sensor reads 0 when wood detected)
   if (idleWoodSensor.fell()) {
-    Serial.println("*** WOOD DETECTED! Automatically starting RELOADING sequence ***");
+    Serial.println("WOOD DETECTED - Starting RELOADING sequence");
     transitionToState(STATE_RELOADING);
     return;
   }

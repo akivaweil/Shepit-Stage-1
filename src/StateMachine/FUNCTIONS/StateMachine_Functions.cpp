@@ -38,7 +38,6 @@ void enableAllMotors() {
     digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
     digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
     motorsEnabled = true;
-    Serial.println("All motors ENABLED");
   }
   resetMotorTimeout();
 }
@@ -50,7 +49,6 @@ void enableAllMotorsWithDelay() {
     motorsEnabled = true;
     waitingForMotorEnable = true;
     motorEnableStartTime = millis();
-    Serial.println("All motors ENABLED - waiting 500ms for stabilization");
   }
   resetMotorTimeout();
 }
@@ -59,7 +57,6 @@ bool isMotorEnableDelayComplete() {
   if (waitingForMotorEnable) {
     if (millis() - motorEnableStartTime >= MOTOR_ENABLE_DELAY_MS) {
       waitingForMotorEnable = false;
-      Serial.println("Motor enable delay complete - ready for movement");
       return true;
     }
     return false;
@@ -165,13 +162,13 @@ void handleEmergencyStop() {
 
 void transitionToState(SystemState newState) {
   if (newState != currentSystemState) {
-    Serial.println("*** TRANSITIONING FROM " + getCurrentStateName() + " TO " + 
+    Serial.println("→ " + String(
                    (newState == STATE_IDLE ? "IDLE" : 
                     newState == STATE_RELOADING ? "RELOADING" :
                     newState == STATE_CUTTING ? "CUTTING" : 
                     newState == STATE_RETURNING ? "RETURNING" :
                     newState == STATE_FEEDING ? "FEEDING" : 
-                    newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN") + " ***");
+                    newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN")));
     
     // Exit current state
     switch (currentSystemState) {
