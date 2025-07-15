@@ -73,6 +73,9 @@ void updateReloadingState() {
     // Retract clamp before feed motor movement
     retractClamp();
     
+    // Small delay to allow motor driver to stabilize after enable
+    delay(100);
+    
     // Configure and move feed motor
     if (feedMotor) {
       feedMotor->setSpeedInHz(feedMotorSpeed);
