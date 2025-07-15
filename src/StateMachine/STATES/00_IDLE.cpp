@@ -15,7 +15,7 @@ static Bounce2::Button idleWoodSensor = Bounce2::Button();
 
 void enterIdleState() {
   // Initialize wood sensor monitoring
-  idleWoodSensor.attach(IS_WOOD_PIN, INPUT_PULLUP);
+  idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT_PULLUP);
   idleWoodSensor.interval(50); // 50ms debounce
   
   // Enable motors when entering idle state

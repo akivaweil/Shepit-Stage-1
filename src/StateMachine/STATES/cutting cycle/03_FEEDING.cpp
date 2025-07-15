@@ -57,9 +57,17 @@ void updateFeedingState() {
       // Extend clamp now that feed motor movement is complete
       extendClamp();
       
-      // Feeding sequence complete, return to idle
-      Serial.println("*** CUTTING CYCLE COMPLETE ***");
-      transitionToState(STATE_IDLE);
+      //! ************************************************************************
+      //! CHECK WOOD SENSOR FOR CONTINUOUS CUTTING
+      //! ************************************************************************
+      if (isWoodPresent()) {
+        Serial.println("Wood still present - starting another cutting cycle");
+        transitionToState(STATE_CUTTING);
+      } else {
+        // No more wood detected, cutting cycle complete
+        Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
+        transitionToState(STATE_IDLE);
+      }
     }
   }
 }

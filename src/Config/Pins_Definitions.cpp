@@ -18,8 +18,8 @@ const int CUT_MOTOR_ENABLE_PIN = 17;
 // Button input pin (active high)
 const int BUTTON_PIN = 9;
 
-// Wood detection sensor pin (active LOW - LOW when wood detected)
-const int IS_WOOD_PIN = 3;
+// Wood present sensor pin (active LOW - LOW when wood detected)
+const int WOOD_PRESENT_SENSOR_PIN = 3;
 
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
 const int CLAMP_RELAY_PIN = 37; 

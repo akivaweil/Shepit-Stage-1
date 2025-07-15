@@ -24,7 +24,7 @@ static bool sequenceStarted = false;
 
 void enterReloadingState() {
   // Initialize wood sensor with pullup (active LOW)
-  woodSensor.attach(IS_WOOD_PIN, INPUT_PULLUP);
+  woodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT_PULLUP);
   woodSensor.interval(50); // 50ms debounce
   
   // Reset all sequence variables

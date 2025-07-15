@@ -81,6 +81,9 @@ void extendClamp();
 void retractClamp();
 bool isClampRetracted();
 
+// Wood sensor functions
+bool isWoodPresent();
+
 // Individual state functions
 void enterIdleState();
 void updateIdleState();
