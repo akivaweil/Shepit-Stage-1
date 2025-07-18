@@ -1,10 +1,14 @@
 {
     "folders": [
-		{
-			"name": "Shepit S1 Cubes July25",
-			"path": ".."
-		}
-	],
+        {
+            "name": "Shepit S1 Cubes July25",
+            "path": ".."
+        },
+        {
+            "name": "Paint Machine July25",
+            "path": "../../Paint Machine July25"
+        }
+    ],
     "settings": {
         "folder-color.enable": true,
         "folder-color.autoReload": true

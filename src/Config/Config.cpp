@@ -13,9 +13,9 @@ const float feedMotorSteps = 1320.0;           // Steps per move
 const float feedMotorPullbackSteps = 20.0;     // Steps to pull back during return
 
 // Cut motor parameters
-const float cutMotorSpeed = 5000.0;            // Steps per second (reduced for smoother operation)
+const float cutMotorSpeed = 1500.0;            // Steps per second (reduced for smoother operation)
 const float cutMotorAcceleration = 5000.0;    // Steps per second^2 (increased for smooth acceleration)
-const float cutMotorSteps = 3000.0;            // Steps per move
+const float cutMotorSteps = 5000.0;            // Steps per move
 
 // Cut motor return parameters (for RETURNING state)
 const float cutMotorReturnSpeed = 10000.0;      // Steps per second (slower for return movement)
