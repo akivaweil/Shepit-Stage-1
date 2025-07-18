@@ -1,12 +1,12 @@
 {
     "folders": [
         {
-            "name": "Shepit S1 Cubes July25",
-            "path": ".."
-        },
-        {
             "name": "Paint Machine July25",
             "path": "../../Paint Machine July25"
+        },
+        {
+            "name": "TA July25",
+            "path": "../../TA July25"
         }
     ],
     "settings": {
