@@ -96,23 +96,23 @@ void updateIdleState() {
   // Update distance sensor
   distanceSensor.update();
   
-  // Simple distance sensor logic: run when NOT triggered, stop when triggered
-  if (distanceSensor.read() == HIGH) {
-    // Sensor triggered - stop motor if running
-    if (feedMotor && feedMotor->isRunning()) {
-      feedMotor->forceStop();
-      extendClamp();
-      Serial.println("Distance sensor triggered - motor stopped");
-    }
-  } else {
-    // Sensor not triggered - start motor if not running
+  // Simple distance sensor logic: run when triggered (LOW), stop when not triggered (HIGH)
+  if (distanceSensor.read() == LOW) {
+    // Sensor triggered (LOW) - start motor if not running
     if (feedMotor && !feedMotor->isRunning()) {
       retractClamp();
       // Reconfigure motor settings before starting
       feedMotor->setSpeedInHz(feedMotorSpeed);
       feedMotor->setAcceleration(feedMotorAcceleration);
       feedMotor->runForward();
-      Serial.println("Distance sensor not triggered - motor started with speed: " + String(feedMotorSpeed));
+      Serial.println("Distance sensor triggered (LOW) - motor started with speed: " + String(feedMotorSpeed));
+    }
+  } else {
+    // Sensor not triggered (HIGH) - stop motor if running
+    if (feedMotor && feedMotor->isRunning()) {
+      feedMotor->forceStop();
+      extendClamp();
+      Serial.println("Distance sensor not triggered (HIGH) - motor stopped");
     }
   }
   
@@ -120,7 +120,8 @@ void updateIdleState() {
   static unsigned long lastDebugTime = 0;
   if (millis() - lastDebugTime > 2000) { // Every 2 seconds
     lastDebugTime = millis();
-    Serial.println("Debug - Distance sensor: " + String(distanceSensor.read()) + 
+    String sensorStatus = (distanceSensor.read() == LOW) ? "TRIGGERED (LOW)" : "NOT TRIGGERED (HIGH)";
+    Serial.println("Debug - Distance sensor: " + sensorStatus + 
                   ", Motor running: " + String(feedMotor ? feedMotor->isRunning() : false) +
                   ", Motor enabled: " + String(motorsEnabled));
   }
