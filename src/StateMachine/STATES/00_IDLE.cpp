@@ -37,6 +37,10 @@ static bool feedMotorWasRunning = false;
 static unsigned long lastFeedMotorStateChange = 0;
 static const unsigned long FEED_MOTOR_STATE_CHANGE_DELAY = 100; // 100ms minimum delay between state changes
 
+// Feed motor timeout tracking for 2-second safety limit
+static unsigned long feedMotorStartTime = 0;
+static bool feedMotorTimeoutOccurred = false;
+
 // Clamp state tracking to prevent rapid state changes
 static bool clampShouldBeRetracted = false;
 static bool clampWasRetracted = false;
@@ -77,6 +81,9 @@ void enterIdleState() {
   feedMotorShouldRun = false;
   feedMotorWasRunning = false;
   lastFeedMotorStateChange = 0;
+  
+  // Reset feed motor timeout tracking
+  feedMotorTimeoutOccurred = false;
   
   // Reset clamp control state
   clampShouldBeRetracted = false;
@@ -171,6 +178,10 @@ void updateIdleState() {
           feedMotor->setAcceleration(feedMotorAcceleration);
           feedMotor->runForward();
           
+          // Start 2-second timeout tracking for feed motor safety
+          feedMotorStartTime = millis();
+          feedMotorTimeoutOccurred = false;
+          
           // Reset motor timeout to keep motors enabled
           resetMotorTimeout();
           
@@ -179,21 +190,49 @@ void updateIdleState() {
       } else {
         // Feed motor should NOT be running
         if (feedMotor && feedMotor->isRunning()) {
-          // Stop the feed motor
-          feedMotor->forceStop();
-          
-          if (inCuttingCycle) {
-            Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
-          } else if (!runCycleActive) {
-            Serial.println("Feed motor stopped: run cycle switch turned OFF");
-          } else if (!woodPresent) {
-            Serial.println("Feed motor stopped: wood no longer present");
-          }
+                  // Stop the feed motor
+        feedMotor->forceStop();
+        
+        // Reset timeout tracking when motor stops
+        feedMotorTimeoutOccurred = false;
+        
+        if (inCuttingCycle) {
+          Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
+        } else if (!runCycleActive) {
+          Serial.println("Feed motor stopped: run cycle switch turned OFF");
+        } else if (!woodPresent) {
+          Serial.println("Feed motor stopped: wood no longer present");
+        }
         }
       }
       
       // Update the tracking variable
       feedMotorWasRunning = feedMotorShouldRun;
+    }
+  }
+  
+  //! ************************************************************************
+  //! FEED MOTOR TIMEOUT CHECK (2-SECOND SAFETY LIMIT)
+  //! ************************************************************************
+  // Check if feed motor has been running for more than 2 seconds without distance sensor trigger
+  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - feedMotorStartTime;
+    
+    if (elapsedTime >= 2000) {
+      feedMotorTimeoutOccurred = true;
+      Serial.println("FEED MOTOR TIMEOUT - Motor running for 2+ seconds, stopping for safety");
+      
+      // Stop the feed motor immediately
+      feedMotor->forceStop();
+      
+      // Extend clamp to secure wood
+      extendClamp();
+      
+      // Update tracking variables
+      feedMotorWasRunning = false;
+      
+      Serial.println("Feed motor stopped due to 2-second timeout - safety limit reached");
     }
   }
   
@@ -205,6 +244,10 @@ void updateIdleState() {
     // Stop feed motor if it's running
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
+      
+      // Reset timeout tracking when motor stops due to distance sensor
+      feedMotorTimeoutOccurred = false;
+      
       Serial.println("Feed motor stopped: distance sensor triggered - starting cutting cycle");
     }
     
