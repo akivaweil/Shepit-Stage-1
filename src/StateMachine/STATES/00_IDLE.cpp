@@ -10,6 +10,7 @@
 // Motors will automatically disable after 3 seconds of inactivity (sleep mode)
 // Also constantly monitors for wood detection to automatically start reloading
 // Run cycle switch monitoring for cutting cycle control
+// Distance sensor continuously controls feed motor (active LOW - runs when triggered)
 
 // Wood sensor debouncer for IDLE state monitoring
 static Bounce2::Button idleWoodSensor = Bounce2::Button();
@@ -23,28 +24,28 @@ static Bounce2::Button rightSwitch = Bounce2::Button();
 // Red button debouncer for continuous feed operation
 static Bounce2::Button redButton = Bounce2::Button();
 
-// Distance sensor debouncer for test mode
+// Distance sensor debouncer for continuous feed motor control
 static Bounce2::Button distanceSensor = Bounce2::Button();
 
 void enterIdleState() {
   // Initialize wood sensor monitoring
-  idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT_PULLUP);
+  idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
   idleWoodSensor.interval(50); // 50ms debounce
   
   // Initialize run cycle switch monitoring
-  runCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT_PULLDOWN);
+  runCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT);
   runCycleSwitch.interval(50); // 50ms debounce
   
   // Initialize right switch monitoring
-  rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT_PULLDOWN);
+  rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT);
   rightSwitch.interval(50); // 50ms debounce
   
   // Initialize red button monitoring
-  redButton.attach(RED_BUTTON_PIN, INPUT_PULLDOWN);
+  redButton.attach(RED_BUTTON_PIN, INPUT);
   redButton.interval(50); // 50ms debounce
   
-  // Initialize distance sensor monitoring for test mode
-  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT_PULLDOWN);
+  // Initialize distance sensor monitoring for continuous feed motor control
+  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   distanceSensor.interval(50); // 50ms debounce
   
   // Enable motors when entering idle state
@@ -65,19 +66,8 @@ void enterIdleState() {
     Serial.println("System ready");
   }
   
-  // TEST MODE: Start feed motor running continuously on startup
-  Serial.println("*** TEST MODE: Starting feed motor continuously until distance sensor triggered ***");
-  if (feedMotor) {
-    // Retract clamp for feed motor movement
-    retractClamp();
-    
-    // Start feed motor running forward continuously
-    feedMotor->setSpeedInHz(feedMotorSpeed);
-    feedMotor->setAcceleration(feedMotorAcceleration);
-    feedMotor->runForward();
-    
-    Serial.println("Feed motor started - running continuously until distance sensor on pin 12 is triggered");
-  }
+  // Initialize distance sensor feed motor control
+  Serial.println("Distance sensor feed motor control initialized - motor runs when sensor triggered (LOW)");
 }
 
 void updateIdleState() {
@@ -96,34 +86,36 @@ void updateIdleState() {
   // Update distance sensor
   distanceSensor.update();
   
-  // Simple distance sensor logic: run when triggered (LOW), stop when not triggered (HIGH)
+  //! ************************************************************************
+  //! DISTANCE SENSOR FEED MOTOR CONTROL (ACTIVE LOW)
+  //! ************************************************************************
+  // Distance sensor triggers feed motor continuously while triggered
+  // Sensor reads LOW (0) when wood detected - motor runs
+  // Sensor reads HIGH (1) when no wood - motor stops
+  
   if (distanceSensor.read() == LOW) {
-    // Sensor triggered (LOW) - start motor if not running
+    // Sensor triggered (LOW) - wood detected, run feed motor continuously
     if (feedMotor && !feedMotor->isRunning()) {
+      // Retract clamp before feed motor movement
       retractClamp();
-      // Reconfigure motor settings before starting
+      
+      // Configure and start feed motor
       feedMotor->setSpeedInHz(feedMotorSpeed);
       feedMotor->setAcceleration(feedMotorAcceleration);
       feedMotor->runForward();
-      Serial.println("Distance sensor triggered (LOW) - motor started with speed: " + String(feedMotorSpeed));
+      
+      // Reset motor timeout to keep motors enabled
+      resetMotorTimeout();
     }
   } else {
-    // Sensor not triggered (HIGH) - stop motor if running
+    // Sensor not triggered (HIGH) - no wood detected, stop feed motor
     if (feedMotor && feedMotor->isRunning()) {
+      // Stop the feed motor
       feedMotor->forceStop();
+      
+      // Extend clamp when feed motor stops
       extendClamp();
-      Serial.println("Distance sensor not triggered (HIGH) - motor stopped");
     }
-  }
-  
-  // Debug output every few seconds
-  static unsigned long lastDebugTime = 0;
-  if (millis() - lastDebugTime > 2000) { // Every 2 seconds
-    lastDebugTime = millis();
-    String sensorStatus = (distanceSensor.read() == LOW) ? "TRIGGERED (LOW)" : "NOT TRIGGERED (HIGH)";
-    Serial.println("Debug - Distance sensor: " + sensorStatus + 
-                  ", Motor running: " + String(feedMotor ? feedMotor->isRunning() : false) +
-                  ", Motor enabled: " + String(motorsEnabled));
   }
   
   // Check for wood detection (active LOW - sensor reads 0 when wood detected)
