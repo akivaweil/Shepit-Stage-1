@@ -36,6 +36,9 @@ static bool cycleStarted = false; // Track if cycle has begun to prevent mid-cyc
 // Feed motor timeout tracking for 2-second safety limit during positioning
 static bool feedMotorTimeoutOccurred = false;
 
+// Flag to track if wood needs to be moved away from sensor
+static bool needToMoveWoodAway = false;
+
 void enterCuttingState() {
   // Check only wood presence at the beginning
   // Run cycle switch is NOT checked here - once cutting cycle starts, it completes
