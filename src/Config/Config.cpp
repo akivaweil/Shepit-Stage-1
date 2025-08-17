@@ -7,7 +7,7 @@
 // Feed motor parameters
 const float feedMotorSpeed = 10000.0;           // Steps per second
 const float feedMotorAcceleration = 20000.0;   // Steps per second^2 (increased for smoother acceleration)
-const float feedMotorSteps = 1320.0;           // Steps per move
+const float feedMotorSteps = 0.0;              // Steps per move (set to 0 to disable feeding sequence)
 
 // Feed motor pullback parameters
 const float FM_preCutPullback = 0.0;          // Steps to pull back before cut motor moves
