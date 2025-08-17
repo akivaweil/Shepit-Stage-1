@@ -172,6 +172,13 @@ void updatePositioningPhase() {
     }
   }
   
+  // Debug: Log distance sensor state every 500ms during positioning
+  static unsigned long lastSensorDebug = 0;
+  if (feedMotorStarted && !distanceSensorTriggered && (millis() - lastSensorDebug >= 500)) {
+    Serial.println("CUTTING: Distance sensor debug - State: " + String(distanceSensor.read()) + " (HIGH=wood detected, LOW=no wood)");
+    lastSensorDebug = millis();
+  }
+  
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
   if (distanceSensor.read() == HIGH && !distanceSensorTriggered) {
     Serial.println("CUTTING: DISTANCE SENSOR TRIGGERED - Positioning complete");

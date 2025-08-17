@@ -5,7 +5,7 @@
 //* *********************** MOTOR CONFIGURATION ****************************
 //* ************************************************************************
 // Feed motor parameters
-const float feedMotorSpeed = 10000.0;           // Steps per second
+const float feedMotorSpeed = 2000.0;            // Steps per second (reduced for better distance sensor detection)
 const float feedMotorAcceleration = 20000.0;   // Steps per second^2 (increased for smoother acceleration)
 const float feedMotorSteps = 0.0;              // Steps per move (set to 0 to disable feeding sequence)
 
