@@ -10,7 +10,10 @@
 // Motors will automatically disable after 3 seconds of inactivity (sleep mode)
 // Also constantly monitors for wood detection to automatically start reloading
 // Run cycle switch monitoring for cutting cycle control
-// Distance sensor continuously controls feed motor (active LOW - runs when triggered)
+// Feed motor control: runs continuously when run cycle switch ON + wood present
+// Safety: Feed motor will NOT run during cutting cycles (prevents conflicts)
+// Distance sensor trigger: starts cutting cycle when activated (if conditions still met)
+// Note: Each cutting cycle includes its own positioning step to ensure wood is always in correct position
 
 // Wood sensor debouncer for IDLE state monitoring
 static Bounce2::Button idleWoodSensor = Bounce2::Button();
@@ -24,8 +27,20 @@ static Bounce2::Button rightSwitch = Bounce2::Button();
 // Red button debouncer for continuous feed operation
 static Bounce2::Button redButton = Bounce2::Button();
 
-// Distance sensor debouncer for continuous feed motor control
+// Distance sensor debouncer for feed motor stop control
 static Bounce2::Button distanceSensor = Bounce2::Button();
+
+// Feed motor control state tracking
+static bool feedMotorShouldRun = false;
+static bool feedMotorWasRunning = false;
+static unsigned long lastFeedMotorStateChange = 0;
+static const unsigned long FEED_MOTOR_STATE_CHANGE_DELAY = 100; // 100ms minimum delay between state changes
+
+// Clamp state tracking to prevent rapid state changes
+static bool clampShouldBeRetracted = false;
+static bool clampWasRetracted = false;
+static unsigned long lastClampStateChange = 0;
+static const unsigned long CLAMP_STATE_CHANGE_DELAY = 200; // 200ms minimum delay between clamp state changes
 
 void enterIdleState() {
   // Initialize wood sensor monitoring
@@ -44,7 +59,7 @@ void enterIdleState() {
   redButton.attach(RED_BUTTON_PIN, INPUT);
   redButton.interval(50); // 50ms debounce
   
-  // Initialize distance sensor monitoring for continuous feed motor control
+  // Initialize distance sensor monitoring for feed motor stop control
   distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   distanceSensor.interval(50); // 50ms debounce
   
@@ -53,6 +68,16 @@ void enterIdleState() {
   
   // Reset manual mode flag
   manualMode = false;
+  
+  // Reset feed motor control state
+  feedMotorShouldRun = false;
+  feedMotorWasRunning = false;
+  lastFeedMotorStateChange = 0;
+  
+  // Reset clamp control state
+  clampShouldBeRetracted = false;
+  clampWasRetracted = false;
+  lastClampStateChange = 0;
   
   // Check if this was an emergency stop before resetting the flag
   bool wasEmergencyStop = emergencyStopRequested;
@@ -66,66 +91,125 @@ void enterIdleState() {
     Serial.println("System ready");
   }
   
-  // Initialize distance sensor feed motor control
-  Serial.println("Distance sensor feed motor control initialized - motor runs when sensor triggered (HIGH)");
+  Serial.println("Feed motor control: starts when run cycle switch ON + wood present, stops when distance sensor triggered");
 }
 
 void updateIdleState() {
-  // Update wood sensor
+  // Update all debouncers
   idleWoodSensor.update();
-  
-  // Update run cycle switch
   runCycleSwitch.update();
-  
-  // Update right switch
   rightSwitch.update();
-  
-  // Update red button
   redButton.update();
-  
-  // Update distance sensor
   distanceSensor.update();
   
   //! ************************************************************************
-  //! DISTANCE SENSOR FEED MOTOR CONTROL (ACTIVE HIGH)
+  //! FEED MOTOR CONTROL LOGIC
   //! ************************************************************************
-  // Distance sensor triggers feed motor continuously while triggered
-  // Sensor reads HIGH (1) when wood detected - motor runs
-  // Sensor reads LOW (0) when no wood - motor stops
+  // Simplified logic: Feed motor runs continuously when conditions are met
+  // Distance sensor triggers cutting cycle when activated
+  // IMPORTANT: Feed motor will NOT run during cutting cycles for safety
   
-  if (distanceSensor.read() == HIGH) {
-    // Sensor triggered (HIGH) - wood detected, run feed motor continuously
-    if (feedMotor && !feedMotor->isRunning()) {
-      // Ensure motors are enabled (wake from sleep mode if needed)
-      if (!motorsEnabled) {
-        enableAllMotors();
-        Serial.println("Distance sensor triggered - motors enabled from sleep mode");
+  bool runCycleActive = isRunCycleSwitchActive();
+  bool woodPresent = isWoodPresent();
+  bool distanceSensorTriggered = isWoodAtCorrectDistance();
+  bool inCuttingCycle = isInCuttingCycle();
+  
+  // Feed motor runs when run cycle switch is ON and wood is present
+  // BUT NOT during cutting cycles (safety requirement)
+  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle;
+  
+  // Determine if clamp should be retracted (retracted when feed motor is running)
+  clampShouldBeRetracted = feedMotorShouldRun;
+  
+  // Control clamp state with protection against rapid changes
+  if (clampShouldBeRetracted != clampWasRetracted) {
+    // Check if enough time has passed since last clamp state change
+    if (millis() - lastClampStateChange >= CLAMP_STATE_CHANGE_DELAY) {
+      lastClampStateChange = millis();
+      
+      if (clampShouldBeRetracted) {
+        // Clamp should be retracted
+        if (!isClampRetracted()) {
+          retractClamp();
+          Serial.println("Clamp state: RETRACTED (feed motor running)");
+        }
+      } else {
+        // Clamp should be extended
+        if (isClampRetracted()) {
+          extendClamp();
+          Serial.println("Clamp state: EXTENDED (feed motor stopped)");
+        }
       }
       
-      // Retract clamp before feed motor movement
-      retractClamp();
-      
-      // Configure and start feed motor
-      feedMotor->setSpeedInHz(feedMotorSpeed);
-      feedMotor->setAcceleration(feedMotorAcceleration);
-      feedMotor->runForward();
-      
-      // Reset motor timeout to keep motors enabled
-      resetMotorTimeout();
-      
-      Serial.println("Distance sensor triggered - feed motor started");
+      // Update the tracking variable
+      clampWasRetracted = clampShouldBeRetracted;
     }
-  } else {
-    // Sensor not triggered (LOW) - no wood detected, stop feed motor
+  }
+  
+  // Control feed motor based on should-run state
+  // Add protection against rapid state changes to prevent relay flickering
+  if (feedMotorShouldRun != feedMotorWasRunning) {
+    // Check if enough time has passed since last state change
+    if (millis() - lastFeedMotorStateChange >= FEED_MOTOR_STATE_CHANGE_DELAY) {
+      lastFeedMotorStateChange = millis();
+      
+      if (feedMotorShouldRun) {
+        // Feed motor should be running
+        if (feedMotor && !feedMotor->isRunning()) {
+          // Ensure motors are enabled (wake from sleep mode if needed)
+          if (!motorsEnabled) {
+            enableAllMotors();
+            Serial.println("Feed motor start: motors enabled from sleep mode");
+          }
+          
+          // Configure and start feed motor
+          feedMotor->setSpeedInHz(feedMotorSpeed);
+          feedMotor->setAcceleration(feedMotorAcceleration);
+          feedMotor->runForward();
+          
+          // Reset motor timeout to keep motors enabled
+          resetMotorTimeout();
+          
+          Serial.println("Feed motor started: run cycle ON + wood present");
+        }
+      } else {
+        // Feed motor should NOT be running
+        if (feedMotor && feedMotor->isRunning()) {
+          // Stop the feed motor
+          feedMotor->forceStop();
+          
+          if (inCuttingCycle) {
+            Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
+          } else if (!runCycleActive) {
+            Serial.println("Feed motor stopped: run cycle switch turned OFF");
+          } else if (!woodPresent) {
+            Serial.println("Feed motor stopped: wood no longer present");
+          }
+        }
+      }
+      
+      // Update the tracking variable
+      feedMotorWasRunning = feedMotorShouldRun;
+    }
+  }
+  
+  //! ************************************************************************
+  //! DISTANCE SENSOR TRIGGER FOR CUTTING CYCLE
+  //! ************************************************************************
+  // Check if distance sensor is triggered to start cutting cycle
+  if (distanceSensorTriggered && runCycleActive && woodPresent) {
+    // Stop feed motor if it's running
     if (feedMotor && feedMotor->isRunning()) {
-      // Stop the feed motor
       feedMotor->forceStop();
-      
-      // Extend clamp when feed motor stops
-      extendClamp();
-      
-      Serial.println("Distance sensor not triggered - feed motor stopped");
+      Serial.println("Feed motor stopped: distance sensor triggered - starting cutting cycle");
     }
+    
+    // Start cutting cycle
+    Serial.println("*** DISTANCE SENSOR TRIGGERED - Starting CUTTING CYCLE ***");
+    Serial.println("Conditions met: Run cycle ON, Wood present, Distance sensor triggered");
+    Serial.println("Transitioning to CUTTING state (includes positioning step)...");
+    transitionToState(STATE_CUTTING);
+    return; // Exit early since we're transitioning to cutting state
   }
   
   // Check for wood detection (active LOW - sensor reads 0 when wood detected)
@@ -143,11 +227,17 @@ void updateIdleState() {
   // Check for run cycle switch activation (active HIGH - switch reads 1 when triggered)
   if (runCycleSwitch.rose()) {
     Serial.println("RUN CYCLE SWITCH ACTIVATED - Cutting cycle enabled");
+    
+    // If wood is present, feed motor will start automatically via the main control logic above
+    if (isWoodPresent()) {
+      Serial.println("WOOD PRESENT + RUN CYCLE SWITCH ACTIVE - Feed motor will start automatically");
+    }
   }
   
   // Check for run cycle switch deactivation (switch released)
   if (runCycleSwitch.fell()) {
     Serial.println("RUN CYCLE SWITCH DEACTIVATED - Cutting cycle disabled");
+    // Feed motor will stop automatically via the main control logic above
   }
   
   // Check for right switch activation (active HIGH - switch reads 1 when triggered)

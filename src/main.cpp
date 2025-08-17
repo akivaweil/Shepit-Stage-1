@@ -36,9 +36,6 @@ Bounce2::Button button = Bounce2::Button();
 String inputString = "";
 bool stringComplete = false;
 
-// Clamp control tracking for manual mode
-static bool previousFeedMotorRunning = false;
-
 //* ************************************************************************
 //* *********************** SERIAL COMMAND HANDLER ************************
 //* ************************************************************************
@@ -49,9 +46,9 @@ void processSerialCommand(String command) {
   Serial.println("Command received: " + command);
   
   // Transition to manual mode for motor commands
-  if (!manualMode && (command.startsWith("feed") || command.startsWith("cut") || 
+  if (command.startsWith("feed") || command.startsWith("cut") || 
                       command == "enablefeed" || command == "disablefeed" ||
-                      command == "enablecut" || command == "disablecut")) {
+                      command == "enablecut" || command == "disablecut") {
     transitionToState(STATE_MANUAL);
   }
   
@@ -185,10 +182,6 @@ void processSerialCommand(String command) {
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
     Serial.println("Pneumatic clamp: " + String(isClampRetracted() ? "RETRACTED" : "EXTENDED"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
-    // Debug wood sensor if in reloading state
-    if (currentSystemState == STATE_RELOADING) {
-      Serial.println("Wood sensor pin 3: " + String(digitalRead(3)));
-    }
   }
   
   // Emergency stop
@@ -213,65 +206,53 @@ void processSerialCommand(String command) {
     }
   }
   
-  // Start reloading state
-  else if (command == "reloading") {
-    if (isSystemIdle()) {
-      // Check if run cycle switch is active before starting reloading
-      if (isRunCycleSwitchActive()) {
-        Serial.println("Starting reloading state - RUN CYCLE SWITCH ACTIVE");
-        transitionToState(STATE_RELOADING);
-      } else {
-        Serial.println("Cannot start reloading - RUN CYCLE SWITCH NOT ACTIVE");
-      }
-    } else {
-      Serial.println("Cannot start reloading - current state: " + getCurrentStateName());
-    }
-  }
-  
-  // Test wood detection sequence (debug command)
-  else if (command == "testwood") {
-    if (currentSystemState == STATE_RELOADING) {
-      Serial.println("*** MANUALLY TRIGGERING WOOD DETECTION SEQUENCE ***");
-      transitionToState(STATE_CUTTING);
-    } else {
-      Serial.println("Must be in RELOADING state to test wood detection. Current state: " + getCurrentStateName());
-    }
-  }
-  
   // Return to idle from manual mode
   else if (command == "idle") {
-    transitionToState(STATE_IDLE);
-    Serial.println("Returning to idle state");
+    if (manualMode) {
+      Serial.println("Exiting manual mode - returning to IDLE");
+      transitionToState(STATE_IDLE);
+    } else {
+      Serial.println("Already in IDLE state");
+    }
+  }
+  
+  // Exit manual mode
+  else if (command == "exit") {
+    if (manualMode) {
+      Serial.println("Exiting manual mode - returning to IDLE");
+      transitionToState(STATE_IDLE);
+    } else {
+      Serial.println("Not in manual mode");
+    }
   }
   
   // Help command
   else if (command == "help") {
-    Serial.println("=== AVAILABLE COMMANDS ===");
-    Serial.println("System Control:");
-    Serial.println("  Turn ON run cycle switch to enable cutting cycles");
-    Serial.println("  Wood must be detected for cutting cycle to start");
-    Serial.println("  System will feed wood until distance sensor is triggered");
-    Serial.println("  After delay, cutting cycle begins and continues until wood gone or switch off");
+    Serial.println("=== AVAILABLE SERIAL COMMANDS ===");
     Serial.println("Motor Control:");
-    Serial.println("  enablefeed, disablefeed, enablecut, disablecut, disableall");
-    Serial.println("Pneumatic Clamp:");
-    Serial.println("  clampextend, clampretract");
-    Serial.println("Basic Movement:");
-    Serial.println("  feedforward, feedbackward, cutforward, cutbackward");
-    Serial.println("  feedstop, cutstop");
-    Serial.println("Custom Steps:");
-    Serial.println("  feed[number] (e.g., feed500, feed-200)");
-    Serial.println("  cut[number] (e.g., cut100, cut-50)");
-    Serial.println("Speed Control:");
-    Serial.println("  feedspeed[number] (e.g., feedspeed500)");
-    Serial.println("  cutspeed[number] (e.g., cutspeed100)");
+    Serial.println("  enablefeed/disablefeed - Enable/disable feed motor");
+    Serial.println("  enablecut/disablecut - Enable/disable cut motor");
+    Serial.println("  disableall - Disable all motors");
+    Serial.println("Movement:");
+    Serial.println("  feedforward/feedbackward - Move feed motor forward/backward");
+    Serial.println("  cutforward/cutbackward - Move cut motor forward/backward");
+    Serial.println("  feedstop/cutstop - Stop respective motor");
+    Serial.println("  feed500, cut-200 - Move specific number of steps");
+    Serial.println("  feedspeed500, cutspeed100 - Set motor speeds");
+    Serial.println("Clamp Control:");
+    Serial.println("  clampextend/clampretract - Control pneumatic clamp");
     Serial.println("System:");
-    Serial.println("  status, stop, emergency, sequence, reloading, help");
+    Serial.println("  status - Show system status");
+    Serial.println("  sequence - Start cutting sequence manually");
+    Serial.println("  stop/emergency - Emergency stop");
+    Serial.println("  idle - Return to IDLE state");
+    Serial.println("  exit - Exit manual mode");
+    Serial.println("  help - Show this help");
   }
   
+  // Unknown command
   else {
-    Serial.println("Unknown command: " + command);
-    Serial.println("Type 'help' for available commands");
+    Serial.println("Unknown command: " + command + " (type 'help' for available commands)");
   }
 }
 
@@ -438,27 +419,12 @@ void loop() {
   updateStateMachine();
 
   //! ************************************************************************
-  //! STEP 6: MONITOR CLAMP CONTROL FOR MANUAL MODE
-  //! ************************************************************************
-  // Check if feed motor has stopped moving in manual mode and extend clamp
-  if (manualMode && feedMotor) {
-    bool currentFeedMotorRunning = feedMotor->isRunning();
-    
-    // If feed motor was running and now stopped, extend clamp
-    if (previousFeedMotorRunning && !currentFeedMotorRunning) {
-      extendClamp(); // Extend clamp when feed motor stops
-    }
-    
-    previousFeedMotorRunning = currentFeedMotorRunning;
-  }
-
-  //! ************************************************************************
-  //! STEP 7: CHECK MOTOR TIMEOUT FOR SLEEP MODE
+  //! STEP 6: CHECK MOTOR TIMEOUT FOR SLEEP MODE
   //! ************************************************************************
   checkMotorTimeout();
 
   //! ************************************************************************
-  //! STEP 8: SMALL DELAY TO PREVENT WATCHDOG ISSUES
+  //! STEP 7: SMALL DELAY TO PREVENT WATCHDOG ISSUES
   //! ************************************************************************
   delay(10);
 }

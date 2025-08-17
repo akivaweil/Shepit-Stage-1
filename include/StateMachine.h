@@ -11,12 +11,10 @@
 // State enumeration
 enum SystemState {
   STATE_IDLE = 0,
-  STATE_RELOADING = 1,
-  STATE_FEED_TO_DISTANCE = 2,
-  STATE_CUTTING = 3,
-  STATE_RETURNING = 4,
-  STATE_FEEDING = 5,
-  STATE_MANUAL = 6
+  STATE_FEED_TO_DISTANCE = 1,
+  STATE_CUTTING = 2,
+  STATE_RETURNING = 3,
+  STATE_MANUAL = 4
 };
 
 // Cutting phase enumeration (no longer used - kept for compatibility)
@@ -61,8 +59,11 @@ void initializeStateMachine();
 void updateStateMachine();
 void transitionToState(SystemState newState);
 String getCurrentStateName();
+
+// System state functions
 bool isSystemIdle();
 bool isSystemBusy();
+bool isInCuttingCycle();
 void handleEmergencyStop();
 
 // Motor control functions
@@ -100,10 +101,6 @@ void enterIdleState();
 void updateIdleState();
 void exitIdleState();
 
-void enterReloadingState();
-void updateReloadingState();
-void exitReloadingState();
-
 void enterFeedToDistanceState();
 void updateFeedToDistanceState();
 void exitFeedToDistanceState();
@@ -112,13 +109,13 @@ void enterCuttingState();
 void updateCuttingState();
 void exitCuttingState();
 
+// Cutting state phase functions
+void updatePositioningPhase();
+void updateCuttingPhase();
+
 void enterReturningState();
 void updateReturningState();
 void exitReturningState();
-
-void enterFeedingState();
-void updateFeedingState();
-void exitFeedingState();
 
 void enterManualState();
 void updateManualState();

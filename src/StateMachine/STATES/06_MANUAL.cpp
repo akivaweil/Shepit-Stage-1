@@ -5,28 +5,33 @@
 //* ************************************************************************
 //* ************************ MANUAL STATE *********************************
 //* ************************************************************************
-// The MANUAL state handles serial command operations
+// The MANUAL state is purely a serial command utility
 // Motors are enabled immediately (no delay) for responsive manual control
+// This state does not interfere with the main state machine logic
+// It only handles serial commands and motor movements
 
 void enterManualState() {
   // Motors are permanently enabled - no need to enable them
   
-  // Set manual mode flag
+  // Set manual mode flag for serial command processing only
   manualMode = true;
   
-  Serial.println("Manual mode active - motors permanently enabled");
+  Serial.println("Manual mode active - motors permanently enabled for serial commands");
+  Serial.println("Type 'exit' to return to normal operation");
 }
 
 void updateManualState() {
-  // Motors are permanently enabled - no timeout management needed
-  
-  // Manual state is primarily driven by serial commands
+  // Manual state is purely driven by serial commands
+  // No state machine logic or motor monitoring here
   // The actual motor movements are handled in the serial command processor
+  // This state just waits for serial input
 }
 
 void exitManualState() {
   // Reset manual mode flag
   manualMode = false;
+  
+  Serial.println("Exiting manual mode - returning to normal operation");
   
   // Motors will be handled by the target state
   // If going to IDLE, motors will timeout after 2 seconds

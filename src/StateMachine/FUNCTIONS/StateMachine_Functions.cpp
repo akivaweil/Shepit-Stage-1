@@ -79,8 +79,13 @@ void disableAllMotorsAfterDelay() {
 
 void checkMotorTimeout() {
   // Sleep mode: disable motors after 3 seconds in idle state
+  // BUT only if feed motor is not running (to prevent relay flickering)
   if (currentSystemState == STATE_IDLE) {
-    if (motorsEnabled && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
+    // Check if feed motor is currently running
+    bool feedMotorRunning = (feedMotor && feedMotor->isRunning());
+    
+    // Only disable motors if they're enabled AND feed motor is not running AND timeout exceeded
+    if (motorsEnabled && !feedMotorRunning && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
       disableAllMotorsAfterDelay();
     }
   }
@@ -210,11 +215,20 @@ bool isSystemIdle() {
 }
 
 bool isSystemBusy() {
-  return (currentSystemState == STATE_RELOADING ||
-          currentSystemState == STATE_FEED_TO_DISTANCE ||
+  return (currentSystemState == STATE_FEED_TO_DISTANCE ||
           currentSystemState == STATE_CUTTING || 
-          currentSystemState == STATE_RETURNING ||
-          currentSystemState == STATE_FEEDING);
+          currentSystemState == STATE_RETURNING);
+}
+
+//* ************************************************************************
+//* *********************** CUTTING CYCLE CHECK ***************************
+//* ************************************************************************
+// Check if system is currently in a cutting cycle (cutting or returning states)
+// This prevents feed motor from running during cutting operations
+
+bool isInCuttingCycle() {
+  return (currentSystemState == STATE_CUTTING || 
+          currentSystemState == STATE_RETURNING);
 }
 
 void handleEmergencyStop() {
@@ -235,20 +249,17 @@ void transitionToState(SystemState newState) {
   if (newState != currentSystemState) {
     Serial.println("→ " + String(
                    (newState == STATE_IDLE ? "IDLE" : 
-                    newState == STATE_RELOADING ? "RELOADING" :
+                    newState == STATE_FEED_TO_DISTANCE ? "FEED_TO_DISTANCE" :
                     newState == STATE_CUTTING ? "CUTTING" : 
                     newState == STATE_RETURNING ? "RETURNING" :
-                    newState == STATE_FEEDING ? "FEEDING" : 
                     newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN")));
     
     // Exit current state
     switch (currentSystemState) {
       case STATE_IDLE: exitIdleState(); break;
-      case STATE_RELOADING: exitReloadingState(); break;
       case STATE_FEED_TO_DISTANCE: exitFeedToDistanceState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
       case STATE_RETURNING: exitReturningState(); break;
-      case STATE_FEEDING: exitFeedingState(); break;
       case STATE_MANUAL: exitManualState(); break;
     }
     
@@ -258,11 +269,9 @@ void transitionToState(SystemState newState) {
     // Enter new state
     switch (currentSystemState) {
       case STATE_IDLE: enterIdleState(); break;
-      case STATE_RELOADING: enterReloadingState(); break;
       case STATE_FEED_TO_DISTANCE: enterFeedToDistanceState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
       case STATE_RETURNING: enterReturningState(); break;
-      case STATE_FEEDING: enterFeedingState(); break;
       case STATE_MANUAL: enterManualState(); break;
     }
   }
@@ -272,11 +281,9 @@ void updateStateMachine() {
   // Update the current state
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
-    case STATE_RELOADING: updateReloadingState(); break;
     case STATE_FEED_TO_DISTANCE: updateFeedToDistanceState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
     case STATE_RETURNING: updateReturningState(); break;
-    case STATE_FEEDING: updateFeedingState(); break;
     case STATE_MANUAL: updateManualState(); break;
   }
 }
