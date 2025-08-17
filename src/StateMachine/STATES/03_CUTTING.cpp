@@ -159,7 +159,7 @@ void updatePositioningPhase() {
       static bool woodMovedAway = false;
       if (needToMoveWoodAway && !woodMovedAway) {
         Serial.println("CUTTING: Moving wood away from sensor first (backward movement)");
-        feedMotor->move(-500); // Move 500 steps backward (original value)
+        feedMotor->move(-FM_preCutPullback); // Move wood away using config value
         
         // Wait for movement to complete
         while (feedMotor->isRunning()) {

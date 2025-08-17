@@ -10,8 +10,8 @@ const float feedMotorAcceleration = 20000.0;   // Steps per second^2 (increased 
 const float feedMotorSteps = 0.0;              // Steps per move (set to 0 to disable feeding sequence)
 
 // Feed motor pullback parameters
-const float FM_preCutPullback = 0.0;          // Steps to pull back before cut motor moves
-const float FM_returnPullback = 0.0;          // Steps to pull back during return (after cutting)
+const float FM_preCutPullback = 50.0;         // Steps to pull back before cut motor moves
+const float FM_returnPullback = 50.0;         // Steps to pull back during return (after cutting)
 
 // Reloading sequence timing
 const unsigned long woodDetectionToFeedDelay = 10; // Milliseconds to wait after wood detection before feed motor moves
