@@ -200,11 +200,9 @@ void stopContinuousFeed() {
 String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
-    case STATE_RELOADING: return "RELOADING";
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
     case STATE_RETURNING: return "RETURNING";
-    case STATE_FEEDING: return "FEEDING";
     case STATE_MANUAL: return "MANUAL";
     default: return "UNKNOWN";
   }

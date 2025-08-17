@@ -14,10 +14,10 @@ const float FM_preCutPullback = 0.0;          // Steps to pull back before cut m
 const float FM_returnPullback = 0.0;          // Steps to pull back during return (after cutting)
 
 // Reloading sequence timing
-const unsigned long woodDetectionToFeedDelay = 1500; // Milliseconds to wait after wood detection before feed motor moves
+const unsigned long woodDetectionToFeedDelay = 10; // Milliseconds to wait after wood detection before feed motor moves
 
 // Wood distance sensor delay
-const unsigned long woodDistanceDelay = 1000; // Milliseconds to wait after distance sensor triggered before cutting cycle
+const unsigned long woodDistanceDelay = 10; // Milliseconds to wait after distance sensor triggered before cutting cycle
 
 // Cut motor parameters
 const float cutMotorSpeed = 1500.0;            // Steps per second (reduced for smoother operation)

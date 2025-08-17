@@ -8,6 +8,7 @@
 //* ************************************************************************
 // The IDLE state is where the system waits for button press or manual commands
 // Motors will automatically disable after 3 seconds of inactivity (sleep mode)
+// 3-second countdown starts immediately when entering this state
 // Also constantly monitors for wood detection to automatically start reloading
 // Run cycle switch monitoring for cutting cycle control
 // Feed motor control: runs continuously when run cycle switch ON + wood present
@@ -65,6 +66,9 @@ void enterIdleState() {
   
   // Enable motors when entering idle state
   enableAllMotors();
+  
+  // Start 3-second motor timeout countdown for sleep mode
+  resetMotorTimeout();
   
   // Reset manual mode flag
   manualMode = false;

@@ -19,13 +19,10 @@ static FeedingPhase currentFeedingPhase = FEED_FORWARD_PHASE;
 static bool feedingStarted = false;
 
 void enterReturningState() {
-  // Check both conditions at the beginning of returning state
-  if (!isRunCycleSwitchActive() || !isWoodPresent()) {
-    if (!isRunCycleSwitchActive()) {
-      Serial.println("RETURNING: RUN CYCLE SWITCH NOT ACTIVE - Canceling cutting cycle");
-    } else if (!isWoodPresent()) {
-      Serial.println("RETURNING: NO WOOD DETECTED - Canceling cutting cycle");
-    }
+  // Check only wood presence at the beginning of returning state
+  // Run cycle switch is NOT checked here - once cutting cycle starts, it completes
+  if (!isWoodPresent()) {
+    Serial.println("RETURNING: NO WOOD DETECTED - Canceling cutting cycle");
     
     // Stop motors if they're running
     if (feedMotor && feedMotor->isRunning()) {
@@ -40,8 +37,9 @@ void enterReturningState() {
     return;
   }
   
-  // Conditions met - proceed with returning state
-  Serial.println("RETURNING: Conditions verified - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
+  // Wood present - proceed with returning state (regardless of run cycle switch)
+  Serial.println("RETURNING: Wood detected - proceeding with returning state");
+  Serial.println("RETURNING: NOTE: Cutting cycle continues regardless of run cycle switch state");
   
   // Motors are permanently enabled - configure motors for return movement
   
@@ -140,16 +138,12 @@ void updateReturningState() {
       //! ************************************************************************
       //! CHECK WOOD SENSOR FOR CONTINUOUS CUTTING
       //! ************************************************************************
-      if (isWoodPresent() && isRunCycleSwitchActive()) {
-        Serial.println("Wood still present & run cycle switch active - starting another cutting cycle");
+      // Only check wood presence - run cycle switch is ignored once cutting cycle starts
+      if (isWoodPresent()) {
+        Serial.println("Wood still present - starting another cutting cycle (regardless of run cycle switch)");
         transitionToState(STATE_CUTTING);
       } else {
-        // Check why we're not continuing
-        if (!isWoodPresent()) {
-          Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
-        } else if (!isRunCycleSwitchActive()) {
-          Serial.println("*** CUTTING CYCLE CANCELLED - Run cycle switch turned off ***");
-        }
+        Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
         transitionToState(STATE_IDLE);
       }
     }

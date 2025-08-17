@@ -12,6 +12,7 @@
 // 3. This ensures wood is always in the correct position before each cut
 // 4. Each cutting cycle completes fully before checking run cycle switch status
 // 5. No mid-cycle interruptions - complete cycle or complete cancellation
+// 6. IMPORTANT: Run cycle switch is only checked at beginning and end - no mid-cycle stops
 
 // Wood distance sensor debouncer for positioning
 static Bounce2::Button distanceSensor = Bounce2::Button();
@@ -30,24 +31,24 @@ static bool distanceSensorTriggered = false;
 static unsigned long positioningStartTime = 0;
 static unsigned long delayStartTime = 0;
 static bool delayComplete = false;
+static bool cycleStarted = false; // Track if cycle has begun to prevent mid-cycle interruption
 
 void enterCuttingState() {
-  // Check both conditions at the beginning of each cutting cycle
-  if (!isRunCycleSwitchActive() || !isWoodPresent()) {
-    if (!isRunCycleSwitchActive()) {
-      Serial.println("CUTTING: RUN CYCLE SWITCH NOT ACTIVE - Canceling cutting cycle");
-    } else if (!isWoodPresent()) {
-      Serial.println("CUTTING: NO WOOD DETECTED - Canceling cutting cycle");
-    }
-    
-    // Return to idle state
+  // Check only wood presence at the beginning
+  // Run cycle switch is NOT checked here - once cutting cycle starts, it completes
+  if (!isWoodPresent()) {
+    Serial.println("CUTTING: NO WOOD DETECTED - Canceling cutting cycle");
     transitionToState(STATE_IDLE);
     return;
   }
   
-  // Conditions met - proceed with cutting cycle
-  Serial.println("CUTTING: Conditions verified - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
+  // Wood present - proceed with cutting cycle (regardless of run cycle switch)
+  Serial.println("CUTTING: Wood detected - starting cutting cycle");
   Serial.println("CUTTING: Starting positioning phase - feeding wood to correct position");
+  Serial.println("CUTTING: NOTE: Cycle will complete regardless of cycle switch state during operation");
+  
+  // Mark cycle as started - no more cycle switch checks until completion
+  cycleStarted = true;
   
   // Initialize distance sensor for positioning
   distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
@@ -79,9 +80,6 @@ void updateCuttingState() {
   // Update distance sensor
   distanceSensor.update();
   
-  // Only check conditions at the beginning of the cycle or when transitioning between phases
-  // This ensures each cutting cycle completes fully before checking run cycle switch status
-  
   // Wait for motor enable delay to complete before starting any movement
   if (!isMotorEnableDelayComplete()) {
     return; // Still waiting for motor stabilization
@@ -99,12 +97,10 @@ void updateCuttingState() {
       
     case PHASE_COMPLETE:
       // Cutting cycle complete - NOW check conditions before transitioning
-      if (!isRunCycleSwitchActive() || !isWoodPresent()) {
-        if (!isRunCycleSwitchActive()) {
-          Serial.println("CUTTING: RUN CYCLE SWITCH NOT ACTIVE - Canceling cycle, returning to IDLE");
-        } else if (!isWoodPresent()) {
-          Serial.println("CUTTING: NO WOOD DETECTED - Canceling cycle, returning to IDLE");
-        }
+      // Note: Once cutting cycle starts, it completes regardless of cycle switch state
+      // E-stop handles emergency situations, so we finish the current operation
+      if (!isWoodPresent()) {
+        Serial.println("CUTTING: NO WOOD DETECTED - Canceling cycle, returning to IDLE");
         
         // Stop all motors if they're running
         if (feedMotor && feedMotor->isRunning()) {
@@ -119,7 +115,7 @@ void updateCuttingState() {
         return;
       }
       
-      // Conditions still met - continue with returning state
+      // Wood still present - continue with returning state (regardless of cycle switch)
       Serial.println("CUTTING: Cutting cycle complete - transitioning to RETURNING state");
       transitionToState(STATE_RETURNING);
       break;
@@ -132,10 +128,11 @@ void updateCuttingState() {
 // Phase 1: Feed wood forward until distance sensor is triggered
 // This ensures wood is always in the correct position before cutting
 // Note: No condition checking during positioning - cycle must complete
+// IMPORTANT: Run cycle switch is ignored during positioning phase
 
 void updatePositioningPhase() {
-  // Start feed motor if not already started
-  if (!feedMotorStarted && feedMotor) {
+  // Start feed motor if not already started AND distance sensor not yet triggered
+  if (!feedMotorStarted && !distanceSensorTriggered && feedMotor) {
     Serial.println("CUTTING: Starting feed motor for positioning phase");
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
@@ -149,10 +146,24 @@ void updatePositioningPhase() {
     Serial.println("CUTTING: DISTANCE SENSOR TRIGGERED - Positioning complete");
     distanceSensorTriggered = true;
     
-    // Stop the feed motor
+    // Stop the feed motor immediately and ensure it's stopped
     if (feedMotor) {
       feedMotor->forceStop();
+      // Additional stop command to ensure motor stops
+      feedMotor->stopMove();
       feedMotorStarted = false;
+      
+      // Wait a brief moment to ensure motor has stopped
+      delay(10);
+      
+      // Double-check if motor is still running and force stop again if needed
+      if (feedMotor->isRunning()) {
+        Serial.println("CUTTING: Feed motor still running - forcing stop again");
+        feedMotor->forceStop();
+        delay(5);
+      }
+      
+      Serial.println("CUTTING: Feed motor stopped successfully");
     }
     
     // Extend clamp to secure wood in position
@@ -170,8 +181,16 @@ void updatePositioningPhase() {
     
     // Ensure feed motor is completely stopped before cutting
     if (feedMotor && feedMotor->isRunning()) {
+      Serial.println("CUTTING: Feed motor still running - forcing stop before cutting phase");
       feedMotor->forceStop();
-      Serial.println("CUTTING: Feed motor stopped before cutting phase");
+      feedMotor->stopMove();
+      delay(10);
+      
+      // Final check to ensure motor is stopped
+      if (feedMotor->isRunning()) {
+        Serial.println("CUTTING: WARNING - Feed motor still running after multiple stop attempts");
+        feedMotor->forceStop();
+      }
     }
     
     // Ensure clamp is engaged to secure wood during cutting
@@ -191,6 +210,7 @@ void updatePositioningPhase() {
 // Phase 2: Perform the actual cutting operation
 // Wood is already positioned and secured by clamp
 // Note: No condition checking during cutting - cycle must complete
+// IMPORTANT: Run cycle switch is ignored during cutting phase
 
 void updateCuttingPhase() {
   // Start cut motor movement if not already started
@@ -210,6 +230,20 @@ void updateCuttingPhase() {
 }
 
 void exitCuttingState() {
+  // Ensure feed motor is completely stopped before exiting
+  if (feedMotor && feedMotor->isRunning()) {
+    Serial.println("CUTTING: Exit - stopping feed motor");
+    feedMotor->forceStop();
+    feedMotor->stopMove();
+    delay(10);
+    
+    // Final check to ensure motor is stopped
+    if (feedMotor->isRunning()) {
+      Serial.println("CUTTING: Exit - forcing stop again");
+      feedMotor->forceStop();
+    }
+  }
+  
   // Reset all phase variables for next cycle
   currentPhase = PHASE_POSITIONING;
   feedMotorStarted = false;
@@ -218,6 +252,7 @@ void exitCuttingState() {
   positioningStartTime = 0;
   delayStartTime = 0;
   delayComplete = false;
+  cycleStarted = false;
   
   // Motors stay enabled for the next state
   // No need to disable motors here
