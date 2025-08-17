@@ -82,38 +82,12 @@ void enterCuttingState() {
   }
   
   // If distance sensor is already HIGH, we need to move wood away first
+  // But we'll check this AFTER the motor movement, not before
+  bool needToMoveWoodAway = false;
   distanceSensor.update();
   if (distanceSensor.read() == HIGH) {
-    Serial.println("CUTTING: Distance sensor already HIGH - moving wood away from sensor first");
-    
-    // Move feed motor backward to get wood completely away from sensor
-    if (feedMotor) {
-      feedMotor->setSpeedInHz(feedMotorSpeed);
-      feedMotor->setAcceleration(feedMotorAcceleration);
-      feedMotor->move(-1000); // Move 1000 steps backward (increased from 500)
-      
-      // Wait for movement to complete
-      while (feedMotor->isRunning()) {
-        delay(10);
-      }
-      
-      // Verify sensor is now LOW before proceeding
-      delay(50); // Give sensor time to settle
-      distanceSensor.update();
-      if (distanceSensor.read() == LOW) {
-        Serial.println("CUTTING: Wood moved away from sensor - sensor now LOW, ready for positioning phase");
-      } else {
-        Serial.println("CUTTING: WARNING - Sensor still HIGH after moving wood away, moving more");
-        // Move even more if sensor is still HIGH
-        feedMotor->move(-500); // Additional 500 steps
-        while (feedMotor->isRunning()) {
-          delay(10);
-        }
-        delay(50);
-        distanceSensor.update();
-        Serial.println("CUTTING: After additional movement, sensor state: " + String(distanceSensor.read()));
-      }
-    }
+    needToMoveWoodAway = true;
+    Serial.println("CUTTING: Distance sensor already HIGH - will move wood away after motor starts");
   }
 }
 
@@ -177,6 +151,26 @@ void updatePositioningPhase() {
     Serial.println("CUTTING: Starting feed motor for positioning phase");
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
+    
+          // Check if we need to move wood away first (sensor was HIGH when entering state)
+      static bool woodMovedAway = false;
+      if (needToMoveWoodAway && !woodMovedAway) {
+        Serial.println("CUTTING: Moving wood away from sensor first (backward movement)");
+        feedMotor->move(-500); // Move 500 steps backward (original value)
+        
+        // Wait for movement to complete
+        while (feedMotor->isRunning()) {
+          delay(10);
+        }
+        
+        // Update sensor after movement
+        delay(50); // Give sensor time to settle
+        distanceSensor.update();
+        Serial.println("CUTTING: After moving wood away, sensor state: " + String(distanceSensor.read()));
+        woodMovedAway = true;
+      }
+    
+    // Now start forward movement for positioning
     feedMotor->runForward(); // Continuous forward movement
     feedMotorStarted = true;
     positioningStartTime = millis();
