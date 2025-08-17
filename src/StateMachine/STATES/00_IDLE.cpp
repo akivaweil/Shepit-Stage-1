@@ -96,6 +96,12 @@ void updateIdleState() {
   if (distanceSensor.read() == HIGH) {
     // Sensor triggered (HIGH) - wood detected, run feed motor continuously
     if (feedMotor && !feedMotor->isRunning()) {
+      // Ensure motors are enabled (wake from sleep mode if needed)
+      if (!motorsEnabled) {
+        enableAllMotors();
+        Serial.println("Distance sensor triggered - motors enabled from sleep mode");
+      }
+      
       // Retract clamp before feed motor movement
       retractClamp();
       
@@ -106,6 +112,8 @@ void updateIdleState() {
       
       // Reset motor timeout to keep motors enabled
       resetMotorTimeout();
+      
+      Serial.println("Distance sensor triggered - feed motor started");
     }
   } else {
     // Sensor not triggered (LOW) - no wood detected, stop feed motor
@@ -115,6 +123,8 @@ void updateIdleState() {
       
       // Extend clamp when feed motor stops
       extendClamp();
+      
+      Serial.println("Distance sensor not triggered - feed motor stopped");
     }
   }
   

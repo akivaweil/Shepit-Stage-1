@@ -20,8 +20,8 @@ static unsigned long delayStartTime = 0;
 static bool delayComplete = false;
 
 void enterFeedToDistanceState() {
-  // Initialize distance sensor with pulldown (active HIGH)
-  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT_PULLDOWN);
+  // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
+  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   distanceSensor.interval(50); // 50ms debounce
   
   // Reset all sequence variables
@@ -54,7 +54,7 @@ void updateFeedToDistanceState() {
   // Update distance sensor
   distanceSensor.update();
   
-  // Check if distance sensor is triggered (active HIGH)
+  // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
   if (distanceSensor.read() == HIGH && !distanceSensorTriggered) {
     Serial.println("DISTANCE SENSOR TRIGGERED - Stopping feed motor");
     distanceSensorTriggered = true;
