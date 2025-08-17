@@ -137,8 +137,8 @@ bool isWoodPresent() {
 //* ************************************************************************
 
 bool isWoodAtCorrectDistance() {
-  // Wood distance sensor is active LOW - returns true when wood is at correct distance
-  return digitalRead(WOOD_DISTANCE_SENSOR_PIN) == LOW;
+  // Wood distance sensor is active HIGH - returns true when wood is at correct distance
+  return digitalRead(WOOD_DISTANCE_SENSOR_PIN) == HIGH;
 }
 
 //* ************************************************************************

@@ -67,7 +67,7 @@ void enterIdleState() {
   }
   
   // Initialize distance sensor feed motor control
-  Serial.println("Distance sensor feed motor control initialized - motor runs when sensor triggered (LOW)");
+  Serial.println("Distance sensor feed motor control initialized - motor runs when sensor triggered (HIGH)");
 }
 
 void updateIdleState() {
@@ -87,14 +87,14 @@ void updateIdleState() {
   distanceSensor.update();
   
   //! ************************************************************************
-  //! DISTANCE SENSOR FEED MOTOR CONTROL (ACTIVE LOW)
+  //! DISTANCE SENSOR FEED MOTOR CONTROL (ACTIVE HIGH)
   //! ************************************************************************
   // Distance sensor triggers feed motor continuously while triggered
-  // Sensor reads LOW (0) when wood detected - motor runs
-  // Sensor reads HIGH (1) when no wood - motor stops
+  // Sensor reads HIGH (1) when wood detected - motor runs
+  // Sensor reads LOW (0) when no wood - motor stops
   
-  if (distanceSensor.read() == LOW) {
-    // Sensor triggered (LOW) - wood detected, run feed motor continuously
+  if (distanceSensor.read() == HIGH) {
+    // Sensor triggered (HIGH) - wood detected, run feed motor continuously
     if (feedMotor && !feedMotor->isRunning()) {
       // Retract clamp before feed motor movement
       retractClamp();
@@ -108,7 +108,7 @@ void updateIdleState() {
       resetMotorTimeout();
     }
   } else {
-    // Sensor not triggered (HIGH) - no wood detected, stop feed motor
+    // Sensor not triggered (LOW) - no wood detected, stop feed motor
     if (feedMotor && feedMotor->isRunning()) {
       // Stop the feed motor
       feedMotor->forceStop();
