@@ -49,7 +49,7 @@ void enterReturningState() {
   //! ************************************************************************
   //! STEP 1: CONFIGURE AND START FEED MOTOR PULLBACK (SIMULTANEOUS)
   //! ************************************************************************
-  if (feedMotor) {
+  if (feedMotor && FM_returnPullback > 0) {
     // Use existing feed motor settings for pullback movement
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
@@ -97,16 +97,37 @@ void updateReturningState() {
       cutMotor->setAcceleration(cutMotorAcceleration);
     }
     
-    // Start feeding sequence for next cutting cycle
-    feedingStarted = true;
-    currentFeedingPhase = FEED_FORWARD_PHASE;
-    
-    // Retract clamp before feed motor movement
-    retractClamp();
-    
-    if (feedMotor) {
-      Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
-      feedMotor->move(feedMotorSteps);
+    // Check if feeding sequence is needed (only if steps > 0)
+    if (feedMotorSteps > 0 || FM_preCutPullback > 0) {
+      // Start feeding sequence for next cutting cycle
+      feedingStarted = true;
+      currentFeedingPhase = FEED_FORWARD_PHASE;
+      
+      // Retract clamp before feed motor movement
+      retractClamp();
+      
+      if (feedMotor) {
+        Serial.println("Starting feed motor forward movement (" + String(feedMotorSteps) + " steps)");
+        feedMotor->move(feedMotorSteps);
+      }
+    } else {
+      // No feeding sequence needed - skip directly to condition checking
+      Serial.println("No feeding sequence needed - checking conditions for next cycle");
+      
+      //! ************************************************************************
+      //! CHECK CONDITIONS FOR CONTINUOUS CUTTING
+      //! ************************************************************************
+      // Check both wood presence AND run cycle switch status
+      if (isWoodPresent() && isRunCycleSwitchActive()) {
+        Serial.println("Wood still present + RUN CYCLE SWITCH ACTIVE - starting another cutting cycle");
+        transitionToState(STATE_CUTTING);
+      } else if (isWoodPresent() && !isRunCycleSwitchActive()) {
+        Serial.println("Wood still present but RUN CYCLE SWITCH INACTIVE - returning to IDLE");
+        transitionToState(STATE_IDLE);
+      } else {
+        Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
+        transitionToState(STATE_IDLE);
+      }
     }
   }
   
@@ -119,12 +140,36 @@ void updateReturningState() {
       //! ************************************************************************
       Serial.println("Feed motor forward movement COMPLETE (" + String(feedMotorSteps) + " steps)");
       
-      // Transition to pullback phase
-      currentFeedingPhase = FEED_PULLBACK_PHASE;
-      
-      // Start pullback movement (negative direction)
-      Serial.println("Starting feed motor pullback (" + String(FM_preCutPullback) + " steps)");
-      feedMotor->move(-FM_preCutPullback);
+      // Check if pullback is needed
+      if (FM_preCutPullback > 0) {
+        // Transition to pullback phase
+        currentFeedingPhase = FEED_PULLBACK_PHASE;
+        
+        // Start pullback movement (negative direction)
+        Serial.println("Starting feed motor pullback (" + String(FM_preCutPullback) + " steps)");
+        feedMotor->move(-FM_preCutPullback);
+      } else {
+        // No pullback needed - feeding sequence complete
+        Serial.println("No pullback needed - feeding sequence complete");
+        
+        // Extend clamp now that feed motor movement is complete
+        extendClamp();
+        
+        //! ************************************************************************
+        //! CHECK CONDITIONS FOR CONTINUOUS CUTTING
+        //! ************************************************************************
+        // Check both wood presence AND run cycle switch status
+        if (isWoodPresent() && isRunCycleSwitchActive()) {
+          Serial.println("Wood still present + RUN CYCLE SWITCH ACTIVE - starting another cutting cycle");
+          transitionToState(STATE_CUTTING);
+        } else if (isWoodPresent() && !isRunCycleSwitchActive()) {
+          Serial.println("Wood still present but RUN CYCLE SWITCH INACTIVE - returning to IDLE");
+          transitionToState(STATE_IDLE);
+        } else {
+          Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
+          transitionToState(STATE_IDLE);
+        }
+      }
       
     } else if (currentFeedingPhase == FEED_PULLBACK_PHASE) {
       //! ************************************************************************
