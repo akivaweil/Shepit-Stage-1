@@ -18,8 +18,20 @@ extern const int CUT_MOTOR_ENABLE_PIN;
 // Button input pin (active high)
 extern const int BUTTON_PIN;
 
+// Run cycle switch pin (active high)
+extern const int RUN_CYCLE_SWITCH_PIN;
+
+// Right switch pin (active high)
+extern const int RIGHT_SWITCH_PIN;
+
+// Red button pin (active high)
+extern const int RED_BUTTON_PIN;
+
 // Wood present sensor pin (active LOW - LOW when wood detected)
 extern const int WOOD_PRESENT_SENSOR_PIN;
+
+// Wood distance sensor pin (active HIGH - HIGH when wood at correct distance)
+extern const int WOOD_DISTANCE_SENSOR_PIN;
 
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
 extern const int CLAMP_RELAY_PIN;

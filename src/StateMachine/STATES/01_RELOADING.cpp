@@ -7,8 +7,8 @@
 //* ************************ RELOADING ************************************
 //* ************************************************************************
 // The RELOADING state monitors the wood sensor and controls the reload sequence:
-// 1. When wood is detected (LOW signal), enable cut motor for 3 seconds
-// 2. After 3 seconds, enable feed motor and move feedMotorSteps
+// 1. When wood is detected (LOW signal), enable cut motor for configurable duration
+// 2. After configurable delay, enable feed motor and move feedMotorSteps
 // 3. Begin cutting cycle
 
 // Wood sensor debouncer
@@ -63,9 +63,9 @@ void updateReloadingState() {
     cutMotorRunning = true;
   }
   
-  // Handle cut motor timing (3 second duration)
-  if (cutMotorRunning && (millis() - cutMotorStartTime >= 3000)) {
-    // 3 seconds elapsed - enable feed motor and start movement
+  // Handle cut motor timing (configurable duration)
+  if (cutMotorRunning && (millis() - cutMotorStartTime >= woodDetectionToFeedDelay)) {
+    // Configurable delay elapsed - enable feed motor and start movement
     enableFeedMotor();
     cutMotorRunning = false;
     feedMotorStartTime = millis();
@@ -89,15 +89,23 @@ void updateReloadingState() {
   
   // Check if feed motor movement is complete
   if (feedMotorMoving && feedMotor && !feedMotor->isRunning()) {
-    // Feed motor movement complete - extend clamp and start cutting cycle
+    // Feed motor movement complete - extend clamp and check run cycle switch
     extendClamp();
     feedMotorMoving = false;
     
-    Serial.println("Feed complete - Starting cutting cycle");
-    
-    // Reset activity timer and transition to cutting state
-    resetMotorTimeout();
-    transitionToState(STATE_CUTTING);
+    // Check if run cycle switch is still active before starting feed to distance
+    if (isRunCycleSwitchActive()) {
+      Serial.println("Feed complete - RUN CYCLE SWITCH ACTIVE - Starting feed to distance");
+      
+      // Reset activity timer and transition to feed to distance state
+      resetMotorTimeout();
+      transitionToState(STATE_FEED_TO_DISTANCE);
+    } else {
+      Serial.println("Feed complete - RUN CYCLE SWITCH NOT ACTIVE - Returning to IDLE");
+      
+      // Return to idle state if run cycle switch is not active
+      transitionToState(STATE_IDLE);
+    }
   }
 }
 

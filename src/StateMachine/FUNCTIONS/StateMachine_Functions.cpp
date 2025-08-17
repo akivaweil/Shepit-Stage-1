@@ -2,6 +2,10 @@
 #include "Config.h"
 #include "Pins_Definitions.h"
 
+// External motor objects from main.cpp
+extern FastAccelStepper *feedMotor;
+extern FastAccelStepper *cutMotor;
+
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
 //* ************************************************************************
@@ -129,6 +133,62 @@ bool isWoodPresent() {
 }
 
 //* ************************************************************************
+//* *********************** WOOD DISTANCE SENSOR FUNCTIONS *****************
+//* ************************************************************************
+
+bool isWoodAtCorrectDistance() {
+  // Wood distance sensor is active HIGH - returns true when wood is at correct distance
+  return digitalRead(WOOD_DISTANCE_SENSOR_PIN) == HIGH;
+}
+
+//* ************************************************************************
+//* *********************** RUN CYCLE SWITCH FUNCTIONS ********************
+//* ************************************************************************
+
+bool isRunCycleSwitchActive() {
+  // Run cycle switch is active HIGH - returns true when switch is ON
+  return digitalRead(RUN_CYCLE_SWITCH_PIN) == HIGH;
+}
+
+//* ************************************************************************
+//* *********************** CONTINUOUS FEED FUNCTIONS *********************
+//* ************************************************************************
+
+void startContinuousFeed() {
+  if (feedMotor) {
+    // Explicitly enable motors if they're disabled (wake from sleep mode)
+    if (!motorsEnabled) {
+      enableAllMotors();
+      Serial.println("Motors enabled for continuous feed operation");
+    }
+    
+    // Retract clamp before feed motor movement
+    retractClamp();
+    
+    // Start continuous forward movement
+    feedMotor->setSpeedInHz(feedMotorSpeed);
+    feedMotor->runForward();
+    
+    // Reset motor timeout to keep motors enabled
+    resetMotorTimeout();
+    
+    Serial.println("Continuous feed started - motor moving forward");
+  }
+}
+
+void stopContinuousFeed() {
+  if (feedMotor) {
+    // Stop the feed motor
+    feedMotor->forceStop();
+    
+    // Extend clamp when feed motor stops
+    extendClamp();
+    
+    Serial.println("Continuous feed stopped - motor stopped and clamp extended");
+  }
+}
+
+//* ************************************************************************
 //* *********************** STATE MACHINE FUNCTIONS **********************
 //* ************************************************************************
 
@@ -136,6 +196,7 @@ String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
     case STATE_RELOADING: return "RELOADING";
+    case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
     case STATE_RETURNING: return "RETURNING";
     case STATE_FEEDING: return "FEEDING";
@@ -150,6 +211,7 @@ bool isSystemIdle() {
 
 bool isSystemBusy() {
   return (currentSystemState == STATE_RELOADING ||
+          currentSystemState == STATE_FEED_TO_DISTANCE ||
           currentSystemState == STATE_CUTTING || 
           currentSystemState == STATE_RETURNING ||
           currentSystemState == STATE_FEEDING);
@@ -183,6 +245,7 @@ void transitionToState(SystemState newState) {
     switch (currentSystemState) {
       case STATE_IDLE: exitIdleState(); break;
       case STATE_RELOADING: exitReloadingState(); break;
+      case STATE_FEED_TO_DISTANCE: exitFeedToDistanceState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
       case STATE_RETURNING: exitReturningState(); break;
       case STATE_FEEDING: exitFeedingState(); break;
@@ -196,6 +259,7 @@ void transitionToState(SystemState newState) {
     switch (currentSystemState) {
       case STATE_IDLE: enterIdleState(); break;
       case STATE_RELOADING: enterReloadingState(); break;
+      case STATE_FEED_TO_DISTANCE: enterFeedToDistanceState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
       case STATE_RETURNING: enterReturningState(); break;
       case STATE_FEEDING: enterFeedingState(); break;
@@ -209,6 +273,7 @@ void updateStateMachine() {
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
     case STATE_RELOADING: updateReloadingState(); break;
+    case STATE_FEED_TO_DISTANCE: updateFeedToDistanceState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
     case STATE_RETURNING: updateReturningState(); break;
     case STATE_FEEDING: updateFeedingState(); break;

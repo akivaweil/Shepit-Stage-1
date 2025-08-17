@@ -9,6 +9,30 @@
 // Motors are permanently enabled - uses specific return speed and acceleration
 
 void enterReturningState() {
+  // Check both conditions at the beginning of returning state
+  if (!isRunCycleSwitchActive() || !isWoodPresent()) {
+    if (!isRunCycleSwitchActive()) {
+      Serial.println("RETURNING: RUN CYCLE SWITCH NOT ACTIVE - Canceling cutting cycle");
+    } else if (!isWoodPresent()) {
+      Serial.println("RETURNING: NO WOOD DETECTED - Canceling cutting cycle");
+    }
+    
+    // Stop motors if they're running
+    if (feedMotor && feedMotor->isRunning()) {
+      feedMotor->forceStop();
+    }
+    if (cutMotor && cutMotor->isRunning()) {
+      cutMotor->forceStop();
+    }
+    
+    // Return to idle state
+    transitionToState(STATE_IDLE);
+    return;
+  }
+  
+  // Conditions met - proceed with returning state
+  Serial.println("RETURNING: Conditions verified - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
+  
   // Motors are permanently enabled - configure motors for return movement
   
   // Retract clamp before feed motor movement
@@ -23,8 +47,8 @@ void enterReturningState() {
     feedMotor->setAcceleration(feedMotorAcceleration);
     
     // Start feed motor pullback movement (negative direction)
-    Serial.println("Starting feed motor pullback (" + String(feedMotorPullbackSteps) + " steps)");
-    feedMotor->move(-feedMotorPullbackSteps);
+    Serial.println("Starting feed motor pullback (" + String(FM_returnPullback) + " steps)");
+    feedMotor->move(-FM_returnPullback);
   }
   
   //! ************************************************************************

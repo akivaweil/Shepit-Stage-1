@@ -172,6 +172,9 @@ void processSerialCommand(String command) {
     Serial.println("Current state: " + getCurrentStateName());
     Serial.println("Motors enabled: " + String(motorsEnabled));
     Serial.println("Manual mode: " + String(manualMode));
+    Serial.println("Run cycle switch: " + String(isRunCycleSwitchActive() ? "ACTIVE" : "INACTIVE"));
+    Serial.println("Wood present: " + String(isWoodPresent() ? "YES" : "NO"));
+    Serial.println("Wood at correct distance: " + String(isWoodAtCorrectDistance() ? "YES" : "NO"));
     Serial.println("Waiting for motor enable: " + String(waitingForMotorEnable));
     if (waitingForMotorEnable) {
       Serial.println("Motor enable delay remaining: " + String(MOTOR_ENABLE_DELAY_MS - (millis() - motorEnableStartTime)) + "ms");
@@ -196,8 +199,15 @@ void processSerialCommand(String command) {
   // Run sequence manually
   else if (command == "sequence") {
     if (isSystemIdle()) {
-      Serial.println("Starting manual sequence...");
-      transitionToState(STATE_CUTTING);
+      // Check if run cycle switch is active and wood is present before starting
+      if (isRunCycleSwitchActive() && isWoodPresent()) {
+        Serial.println("Starting manual sequence - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
+        transitionToState(STATE_FEED_TO_DISTANCE);
+      } else if (!isRunCycleSwitchActive()) {
+        Serial.println("Cannot start sequence - RUN CYCLE SWITCH NOT ACTIVE");
+      } else if (!isWoodPresent()) {
+        Serial.println("Cannot start sequence - NO WOOD DETECTED");
+      }
     } else {
       Serial.println("Sequence already running - current state: " + getCurrentStateName());
     }
@@ -206,8 +216,13 @@ void processSerialCommand(String command) {
   // Start reloading state
   else if (command == "reloading") {
     if (isSystemIdle()) {
-      Serial.println("Starting reloading state...");
-      transitionToState(STATE_RELOADING);
+      // Check if run cycle switch is active before starting reloading
+      if (isRunCycleSwitchActive()) {
+        Serial.println("Starting reloading state - RUN CYCLE SWITCH ACTIVE");
+        transitionToState(STATE_RELOADING);
+      } else {
+        Serial.println("Cannot start reloading - RUN CYCLE SWITCH NOT ACTIVE");
+      }
     } else {
       Serial.println("Cannot start reloading - current state: " + getCurrentStateName());
     }
@@ -232,6 +247,11 @@ void processSerialCommand(String command) {
   // Help command
   else if (command == "help") {
     Serial.println("=== AVAILABLE COMMANDS ===");
+    Serial.println("System Control:");
+    Serial.println("  Turn ON run cycle switch to enable cutting cycles");
+    Serial.println("  Wood must be detected for cutting cycle to start");
+    Serial.println("  System will feed wood until distance sensor is triggered");
+    Serial.println("  After delay, cutting cycle begins and continues until wood gone or switch off");
     Serial.println("Motor Control:");
     Serial.println("  enablefeed, disablefeed, enablecut, disablecut, disableall");
     Serial.println("Pneumatic Clamp:");
@@ -389,11 +409,18 @@ void loop() {
   //! ************************************************************************
   if (button.pressed()) {
     if (isSystemIdle()) {
-      // Start new cutting cycle
-      Serial.println("*** BUTTON PRESSED - STARTING SEQUENCE ***");
-      cycleStartTime = millis();
-      emergencyStopRequested = false;
-      transitionToState(STATE_CUTTING);
+      // Check if run cycle switch is active and wood is present before starting
+      if (isRunCycleSwitchActive() && isWoodPresent()) {
+        // Start new sequence - feed to distance then cutting cycle
+        Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED - STARTING FEED TO DISTANCE SEQUENCE ***");
+        cycleStartTime = millis();
+        emergencyStopRequested = false;
+        transitionToState(STATE_FEED_TO_DISTANCE);
+      } else if (!isRunCycleSwitchActive()) {
+        Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH NOT ACTIVE - Cannot start cutting cycle ***");
+      } else if (!isWoodPresent()) {
+        Serial.println("*** BUTTON PRESSED - NO WOOD DETECTED - Cannot start cutting cycle ***");
+      }
     } 
     else if (isSystemBusy()) {
       // Check if enough time has passed to allow emergency stop (300ms)

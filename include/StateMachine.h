@@ -12,10 +12,11 @@
 enum SystemState {
   STATE_IDLE = 0,
   STATE_RELOADING = 1,
-  STATE_CUTTING = 2,
-  STATE_RETURNING = 3,
-  STATE_FEEDING = 4,
-  STATE_MANUAL = 5
+  STATE_FEED_TO_DISTANCE = 2,
+  STATE_CUTTING = 3,
+  STATE_RETURNING = 4,
+  STATE_FEEDING = 5,
+  STATE_MANUAL = 6
 };
 
 // Cutting phase enumeration (no longer used - kept for compatibility)
@@ -84,6 +85,16 @@ bool isClampRetracted();
 // Wood sensor functions
 bool isWoodPresent();
 
+// Wood distance sensor functions
+bool isWoodAtCorrectDistance();
+
+// Run cycle switch functions
+bool isRunCycleSwitchActive();
+
+// Continuous feed functions
+void startContinuousFeed();
+void stopContinuousFeed();
+
 // Individual state functions
 void enterIdleState();
 void updateIdleState();
@@ -92,6 +103,10 @@ void exitIdleState();
 void enterReloadingState();
 void updateReloadingState();
 void exitReloadingState();
+
+void enterFeedToDistanceState();
+void updateFeedToDistanceState();
+void exitFeedToDistanceState();
 
 void enterCuttingState();
 void updateCuttingState();
