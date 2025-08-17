@@ -136,12 +136,15 @@ void updateReturningState() {
       extendClamp();
       
       //! ************************************************************************
-      //! CHECK WOOD SENSOR FOR CONTINUOUS CUTTING
+      //! CHECK CONDITIONS FOR CONTINUOUS CUTTING
       //! ************************************************************************
-      // Only check wood presence - run cycle switch is ignored once cutting cycle starts
-      if (isWoodPresent()) {
-        Serial.println("Wood still present - starting another cutting cycle (regardless of run cycle switch)");
+      // Check both wood presence AND run cycle switch status
+      if (isWoodPresent() && isRunCycleSwitchActive()) {
+        Serial.println("Wood still present + RUN CYCLE SWITCH ACTIVE - starting another cutting cycle");
         transitionToState(STATE_CUTTING);
+      } else if (isWoodPresent() && !isRunCycleSwitchActive()) {
+        Serial.println("Wood still present but RUN CYCLE SWITCH INACTIVE - returning to IDLE");
+        transitionToState(STATE_IDLE);
       } else {
         Serial.println("*** CUTTING CYCLE COMPLETE - No more wood detected ***");
         transitionToState(STATE_IDLE);

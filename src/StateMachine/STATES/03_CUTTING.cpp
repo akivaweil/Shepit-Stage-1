@@ -33,6 +33,9 @@ static unsigned long delayStartTime = 0;
 static bool delayComplete = false;
 static bool cycleStarted = false; // Track if cycle has begun to prevent mid-cycle interruption
 
+// Feed motor timeout tracking for 2-second safety limit during positioning
+static bool feedMotorTimeoutOccurred = false;
+
 void enterCuttingState() {
   // Check only wood presence at the beginning
   // Run cycle switch is NOT checked here - once cutting cycle starts, it completes
@@ -65,6 +68,9 @@ void enterCuttingState() {
   positioningStartTime = 0;
   delayStartTime = 0;
   delayComplete = false;
+  
+  // Reset feed motor timeout tracking
+  feedMotorTimeoutOccurred = false;
   
   // Start with clamp retracted for feed motor movement during positioning
   retractClamp();
@@ -139,6 +145,31 @@ void updatePositioningPhase() {
     feedMotor->runForward(); // Continuous forward movement
     feedMotorStarted = true;
     positioningStartTime = millis();
+  }
+  
+  // Check for feed motor timeout (2 seconds) during positioning phase
+  if (feedMotorStarted && !distanceSensorTriggered && !feedMotorTimeoutOccurred) {
+    unsigned long currentTime = millis();
+    unsigned long elapsedTime = currentTime - positioningStartTime;
+    
+    if (elapsedTime >= 2000) {
+      feedMotorTimeoutOccurred = true;
+      Serial.println("CUTTING: FEED MOTOR TIMEOUT - Motor running for 2+ seconds during positioning, stopping for safety");
+      
+      // Stop the feed motor immediately
+      if (feedMotor) {
+        feedMotor->forceStop();
+        feedMotorStarted = false;
+      }
+      
+      // Extend clamp to secure wood
+      extendClamp();
+      
+      // Return to IDLE state due to timeout
+      Serial.println("CUTTING: Returning to IDLE due to feed motor timeout");
+      transitionToState(STATE_IDLE);
+      return;
+    }
   }
   
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
