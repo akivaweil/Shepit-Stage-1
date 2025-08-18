@@ -8,9 +8,17 @@
 //* ************************************************************************
 // The FEED_TO_DISTANCE state feeds the wood forward until the distance sensor
 // is triggered, then waits for the configured delay before starting cutting cycle
+// 
+// SAFETY FEATURE: If the run cycle switch is deactivated at any point during
+// this state, the machine will immediately stop the feed motor, extend the clamp
+// to secure the wood, and return to the IDLE state
+//
+// TIMEOUT PROTECTION: The feed motor will automatically stop after 2 seconds
+// if the distance sensor is not triggered, and the clamp will extend to secure
+// the wood before returning to IDLE state
 
 // Wood distance sensor debouncer
-static Bounce2::Button distanceSensor = Bounce2::Button();
+static Bounce2::Button feedDistanceSensor = Bounce2::Button();
 
 // Timing variables for the feed to distance sequence
 static unsigned long feedStartTime = 0;
@@ -23,8 +31,8 @@ static unsigned long lastTimeoutCheck = 0; // Track last timeout check time
 
 void enterFeedToDistanceState() {
   // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
-  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
-  distanceSensor.interval(50); // 50ms debounce
+  feedDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
+  feedDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
   // Reset all sequence variables
   feedStartTime = 0;
@@ -34,6 +42,13 @@ void enterFeedToDistanceState() {
   delayComplete = false;
   timeoutOccurred = false;
   lastTimeoutCheck = 0;
+  
+  // Check if run cycle switch is still active before proceeding
+  if (!isRunCycleSwitchActive()) {
+    Serial.println("FEED_TO_DISTANCE: RUN CYCLE SWITCH NOT ACTIVE - Returning to IDLE immediately");
+    transitionToState(STATE_IDLE);
+    return;
+  }
   
   // Ensure motors are enabled
   enableAllMotors();
@@ -113,8 +128,11 @@ void enterFeedToDistanceState() {
 
 void updateFeedToDistanceState() {
   // Update distance sensor
-  distanceSensor.update();
+  feedDistanceSensor.update();
   
+  //! ************************************************************************
+  //! SAFETY CHECK: CYCLE SWITCH DEACTIVATION DETECTION
+  //! ************************************************************************
   // Check if run cycle switch is turned off during operation - return to idle immediately
   if (!isRunCycleSwitchActive()) {
     Serial.println("FEED_TO_DISTANCE: RUN CYCLE SWITCH TURNED OFF - Stopping operation and returning to IDLE");
@@ -150,7 +168,10 @@ void updateFeedToDistanceState() {
     return;
   }
   
-  // ROBUST TIMEOUT CHECKING - Run every update cycle for reliable detection
+  //! ************************************************************************
+  //! TIMEOUT DETECTION AND HANDLING (2 SECOND LIMIT)
+  //! ************************************************************************
+  // Check for feed motor timeout (2 seconds) - if motor runs too long without sensor trigger, go to idle
   if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedStartTime;
@@ -172,9 +193,8 @@ void updateFeedToDistanceState() {
     }
   }
   
-  // Check for feed motor timeout (2 seconds) - if motor runs too long without sensor trigger, go to idle
-  // Use both the flag and actual motor state for more robust timeout detection
-  if (timeoutOccurred || ((feedMotorMoving || (feedMotor && feedMotor->isRunning())) && !distanceSensorTriggered && (millis() - feedStartTime >= 2000))) {
+  // Handle timeout when it occurs - stop motor and extend clamp immediately
+  if (timeoutOccurred) {
     Serial.println("FEED_TO_DISTANCE: TIMEOUT - Feed motor ran for 2 seconds without triggering distance sensor");
     Serial.println("FEED_TO_DISTANCE: Timeout trigger details:");
     Serial.println("FEED_TO_DISTANCE:   - timeoutOccurred: " + String(timeoutOccurred));
@@ -216,8 +236,11 @@ void updateFeedToDistanceState() {
     return;
   }
   
+  //! ************************************************************************
+  //! DEBUG LOGGING FOR TIMEOUT MONITORING
+  //! ************************************************************************
   // Debug logging for timeout troubleshooting - improved timing logic
-  if (feedMotorMoving && !distanceSensorTriggered) {
+  if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
     unsigned long elapsedTime = millis() - feedStartTime;
     static unsigned long lastDebugTime = 0;
     
@@ -248,7 +271,7 @@ void updateFeedToDistanceState() {
   }
   
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
-  if (distanceSensor.read() == HIGH && !distanceSensorTriggered) {
+  if (feedDistanceSensor.read() == HIGH && !distanceSensorTriggered) {
     Serial.println("DISTANCE SENSOR TRIGGERED - Stopping feed motor");
     Serial.println("FEED_TO_DISTANCE: Distance sensor trigger details:");
     Serial.println("FEED_TO_DISTANCE:   - feedMotorMoving: " + String(feedMotorMoving));
