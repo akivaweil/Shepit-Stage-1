@@ -25,7 +25,7 @@ static Bounce2::Button cuttingDistanceSensor = Bounce2::Button();
 // Cutting cycle step tracking
 static CuttingStep currentStep = STEP_ACTIVATE_MOTORS;
 
-// SIMPLIFIED: Only essential motor position tracking
+// SIMPLIFIED: Position-based tracking instead of boolean flags
 static int32_t cutStartPosition = 0;
 static int32_t returnStartPosition = 0;
 
@@ -191,20 +191,23 @@ void updateExtendClampStep() {
 //* *********************** STEP 5: CUT WOOD ******************************
 //* ************************************************************************
 void updateCutWoodStep() {
-  // Start cut motor forward movement if not already started
-  if (cutMotor) {
-    Serial.println("CUTTING: Step 5 - Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+  // Start cut motor forward movement if not already started and not at target
+  if (cutMotor && !cutMotor->isRunning()) {
+    int32_t currentPosition = cutMotor->getCurrentPosition();
+    int32_t targetPosition = cutStartPosition + cutMotorSteps;
     
-    // Store starting position
-    cutStartPosition = cutMotor->getCurrentPosition();
-    Serial.println("CUTTING: Cut motor starting position: " + String(cutStartPosition));
-    
-    // Configure motor for forward movement
-    cutMotor->setSpeedInHz(cutMotorSpeed);
-    cutMotor->setAcceleration(cutMotorAcceleration);
-    
-    // Start forward movement
-    cutMotor->move(cutMotorSteps);
+    // Only start if we haven't reached the target yet
+    if (abs(currentPosition - targetPosition) > 10) {
+      Serial.println("CUTTING: Step 5 - Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
+      Serial.println("CUTTING: Cut motor starting position: " + String(cutStartPosition));
+      
+      // Configure motor for forward movement
+      cutMotor->setSpeedInHz(cutMotorSpeed);
+      cutMotor->setAcceleration(cutMotorAcceleration);
+      
+      // Start forward movement
+      cutMotor->move(cutMotorSteps);
+    }
   }
   
   // Check if cutting movement is complete
@@ -212,11 +215,10 @@ void updateCutWoodStep() {
     int32_t currentPosition = cutMotor->getCurrentPosition();
     int32_t expectedPosition = cutStartPosition + cutMotorSteps;
     
-    Serial.println("CUTTING: Cut motor forward movement complete");
-    Serial.println("CUTTING: Final position: " + String(currentPosition) + ", Expected: " + String(expectedPosition));
-    
     // Verify position is close to expected (allow small tolerance)
     if (abs(currentPosition - expectedPosition) <= 10) {
+      Serial.println("CUTTING: Cut motor forward movement complete");
+      Serial.println("CUTTING: Final position: " + String(currentPosition) + ", Expected: " + String(expectedPosition));
       Serial.println("CUTTING: Position verification successful - moving to return step");
       
       // Move to next step
@@ -234,20 +236,23 @@ void updateCutWoodStep() {
 //* *********************** STEP 6: RETURN CUT MOTOR **********************
 //* ************************************************************************
 void updateReturnCutMotorStep() {
-  // Start cut motor return movement if not already started
-  if (cutMotor) {
-    Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
+  // Start cut motor return movement if not already started and not at target
+  if (cutMotor && !cutMotor->isRunning()) {
+    int32_t currentPosition = cutMotor->getCurrentPosition();
+    int32_t targetPosition = returnStartPosition - cutMotorSteps;
     
-    // Store starting position for return
-    returnStartPosition = cutMotor->getCurrentPosition();
-    Serial.println("CUTTING: Return starting position: " + String(returnStartPosition));
-    
-    // Configure motor for return movement (faster speed)
-    cutMotor->setSpeedInHz(cutMotorReturnSpeed);
-    cutMotor->setAcceleration(cutMotorReturnAcceleration);
-    
-    // Start return movement
-    cutMotor->move(-cutMotorSteps);
+    // Only start if we haven't reached the target yet
+    if (abs(currentPosition - targetPosition) > 10) {
+      Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
+      Serial.println("CUTTING: Return starting position: " + String(returnStartPosition));
+      
+      // Configure motor for return movement (faster speed)
+      cutMotor->setSpeedInHz(cutMotorReturnSpeed);
+      cutMotor->setAcceleration(cutMotorReturnAcceleration);
+      
+      // Start return movement
+      cutMotor->move(-cutMotorSteps);
+    }
   }
   
   // Check if return movement is complete
@@ -255,11 +260,10 @@ void updateReturnCutMotorStep() {
     int32_t currentPosition = cutMotor->getCurrentPosition();
     int32_t expectedPosition = returnStartPosition - cutMotorSteps;
     
-    Serial.println("CUTTING: Cut motor return movement complete");
-    Serial.println("CUTTING: Final return position: " + String(currentPosition) + ", Expected: " + String(expectedPosition));
-    
     // Verify return position is close to expected (allow small tolerance)
     if (abs(currentPosition - expectedPosition) <= 10) {
+      Serial.println("CUTTING: Cut motor return movement complete");
+      Serial.println("CUTTING: Final return position: " + String(currentPosition) + ", Expected: " + String(expectedPosition));
       Serial.println("CUTTING: Return position verification successful");
       
       // Move to next step

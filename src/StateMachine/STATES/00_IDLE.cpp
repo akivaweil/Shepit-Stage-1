@@ -205,14 +205,14 @@ void updateIdleState() {
   static bool lastRunCycleState = false;
   if (runCycleActive != lastRunCycleState) {
     if (runCycleActive) {
-      Serial.println("Cycle switch turned ON - checking feed motor conditions");
+      Serial.println("Cycle switch: ON - checking feed motor conditions");
       // Force a re-evaluation of feed motor state
       if (feedMotorShouldRun && !feedMotorWasRunning) {
         feedMotorWasRunning = false; // Force the motor to start
         Serial.println("Forcing feed motor state update due to cycle switch ON");
       }
     } else {
-      Serial.println("Cycle switch turned OFF - stopping feed motor");
+      Serial.println("Cycle switch: OFF - stopping feed motor");
       // Ensure feed motor stops immediately
       if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
@@ -236,13 +236,13 @@ void updateIdleState() {
         // Clamp should be retracted
         if (!isClampRetracted()) {
           retractClamp();
-          Serial.println("Clamp state: RETRACTED (feed motor running)");
+          Serial.println("Clamp: RETRACTED (feed motor running)");
         }
       } else {
         // Clamp should be extended
         if (isClampRetracted()) {
           extendClamp();
-          Serial.println("Clamp state: EXTENDED (feed motor stopped)");
+          Serial.println("Clamp: EXTENDED (feed motor stopped)");
         }
       }
       
@@ -264,7 +264,7 @@ void updateIdleState() {
           // Ensure motors are enabled (wake from sleep mode if needed)
           if (!motorsEnabled) {
             enableAllMotors();
-            Serial.println("Feed motor start: motors enabled from sleep mode");
+            Serial.println("Feed motor: motors enabled from sleep mode");
           }
           
           // Configure and start feed motor
@@ -282,7 +282,7 @@ void updateIdleState() {
           // Reset motor timeout to keep motors enabled
           resetMotorTimeout();
           
-          Serial.println("Feed motor started: run cycle ON + wood present");
+          Serial.println("Feed motor: STARTED (run cycle ON + wood present)");
         }
       } else {
         // Feed motor should NOT be running
@@ -294,11 +294,11 @@ void updateIdleState() {
           feedMotorTimeoutOccurred = false;
           
           if (inCuttingCycle) {
-            Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
+            Serial.println("Feed motor: STOPPED (cutting cycle safety)");
           } else if (!runCycleActive) {
-            Serial.println("Feed motor stopped: run cycle switch turned OFF");
+            Serial.println("Feed motor: STOPPED (cycle switch OFF)");
           } else if (!woodPresent) {
-            Serial.println("Feed motor stopped: wood no longer present");
+            Serial.println("Feed motor: STOPPED (wood not present)");
           }
         }
       }
@@ -316,7 +316,7 @@ void updateIdleState() {
   if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_RELOAD)) {
     // Check if run cycle switch is still active
     if (!runCycleActive) {
-      Serial.println("FEED MOTOR STOPPED IMMEDIATELY: Run cycle switch turned OFF");
+      Serial.println("Feed motor: EMERGENCY STOP (cycle switch OFF)");
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
@@ -325,7 +325,7 @@ void updateIdleState() {
     
     // Check if wood is still present
     if (!woodPresent) {
-      Serial.println("FEED MOTOR STOPPED IMMEDIATELY: Wood no longer present");
+      Serial.println("Feed motor: EMERGENCY STOP (wood not present)");
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
@@ -345,7 +345,7 @@ void updateIdleState() {
     if (elapsedTime >= 2000) {
       feedMotorTimeoutOccurred = true;
       setFeedMotorTimeoutLocked(true); // Lock feed motor from restarting after timeout
-      Serial.println("FEED MOTOR TIMEOUT - Motor running for 2+ seconds, stopping for safety");
+      Serial.println("Feed motor: SAFETY TIMEOUT (2+ seconds) - stopping motor");
       
       // Stop the feed motor immediately
       feedMotor->forceStop();
@@ -356,8 +356,7 @@ void updateIdleState() {
       // Update tracking variables
       feedMotorWasRunning = false;
       
-      Serial.println("Feed motor stopped due to 2-second timeout - safety limit reached");
-      Serial.println("Feed motor LOCKED - turn run cycle switch OFF then ON to reset and restart");
+      Serial.println("Feed motor: LOCKED - cycle switch OFF then ON to reset");
     }
   }
   
@@ -373,13 +372,12 @@ void updateIdleState() {
       // Reset timeout tracking when motor stops due to distance sensor
       feedMotorTimeoutOccurred = false;
       
-      Serial.println("Feed motor stopped: distance sensor triggered - starting cutting cycle");
+      Serial.println("Feed motor: STOPPED (distance sensor triggered)");
     }
     
     // Start cutting cycle
-    Serial.println("*** DISTANCE SENSOR TRIGGERED - Starting CUTTING CYCLE ***");
-    Serial.println("Conditions met: Run cycle ON, Wood present, Distance sensor triggered");
-    Serial.println("Transitioning to CUTTING state (includes positioning step)...");
+    Serial.println("*** STARTING CUTTING CYCLE ***");
+    Serial.println("Conditions: Run cycle ON, Wood present, Distance sensor triggered");
     transitionToState(STATE_CUTTING);
     return; // Exit early since we're transitioning to cutting state
   }
@@ -388,34 +386,33 @@ void updateIdleState() {
   if (idleWoodSensor.fell()) {
     // Only start sequence if run cycle switch is active
     if (isRunCycleSwitchActive()) {
-      Serial.println("WOOD DETECTED - RUN CYCLE SWITCH ACTIVE - Starting FEED TO DISTANCE sequence");
+      Serial.println("Wood detected - starting FEED TO DISTANCE sequence");
       transitionToState(STATE_FEED_TO_DISTANCE);
     } else {
-      Serial.println("WOOD DETECTED - RUN CYCLE SWITCH NOT ACTIVE - Ignoring wood detection");
+      Serial.println("Wood detected - cycle switch not active (ignoring)");
     }
     return;
   }
   
   // Check for run cycle switch activation (active HIGH - switch reads 1 when triggered)
   if (runCycleSwitch.rose()) {
-    Serial.println("RUN CYCLE SWITCH ACTIVATED - Cutting cycle enabled");
+    Serial.println("Run cycle switch: ACTIVATED");
     
     // If wood is present, feed motor will start automatically via the main control logic above
     if (isWoodPresent()) {
-      Serial.println("WOOD PRESENT + RUN CYCLE SWITCH ACTIVE - Feed motor will start automatically");
+      Serial.println("Status: Wood present + cycle switch active - feed motor will start");
     }
   }
   
   // Check for run cycle switch deactivation (switch released)
   if (runCycleSwitch.fell()) {
-    Serial.println("RUN CYCLE SWITCH DEACTIVATED - Cutting cycle disabled");
+    Serial.println("Run cycle switch: DEACTIVATED");
     // Feed motor will stop automatically via the main control logic above
   }
   
   // Check for right switch activation (active HIGH - switch reads 1 when triggered)
   if (rightSwitch.rose()) {
-    Serial.println("RIGHT SWITCH TRIGGERED - Starting RELOAD MODE");
-    Serial.println("RELOAD MODE: Starting 5000-step reverse movement");
+    Serial.println("Right switch: ACTIVATED - starting RELOAD mode");
     transitionToState(STATE_RELOAD);
   }
   
@@ -424,13 +421,13 @@ void updateIdleState() {
   
   // Check for red button activation (active HIGH - button reads 1 when pressed)
   if (redButton.rose()) {
-    Serial.println("RED BUTTON PRESSED - Starting continuous feed forward");
+    Serial.println("Red button: PRESSED - starting continuous feed");
     startContinuousFeed();
   }
   
   // Check for red button deactivation (button released)
   if (redButton.fell()) {
-    Serial.println("RED BUTTON RELEASED - Stopping continuous feed");
+    Serial.println("Red button: RELEASED - stopping continuous feed");
     stopContinuousFeed();
   }
   

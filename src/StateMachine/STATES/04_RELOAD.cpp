@@ -46,16 +46,10 @@ void enterReloadState() {
     delay(50); // Give motors time to enable
   }
   
-  Serial.println("RELOAD: Motor enable state - motorsEnabled: " + String(motorsEnabled));
-  
-  // Check actual motor enable pin state
-  Serial.println("RELOAD: Feed motor enable pin state: " + String(digitalRead(FEED_MOTOR_ENABLE_PIN)));
-  Serial.println("RELOAD: Cut motor enable pin state: " + String(digitalRead(CUT_MOTOR_ENABLE_PIN)));
-  
   // Start with clamp retracted for feed motor movement
   retractClamp();
   
-  Serial.println("RELOAD: Starting reload mode - feed motor reversing, cut motor enabled but stationary");
+  Serial.println("RELOAD: Starting reload mode - feed motor reversing");
   
   // Start feed motor movement in reverse (backward)
   if (feedMotor) {
@@ -69,42 +63,30 @@ void enterReloadState() {
       return;
     }
     
-    Serial.println("RELOAD: Configuring feed motor - Speed: " + String(feedMotorSpeed) + "Hz, Accel: " + String(feedMotorAcceleration));
-    
     // Get initial position for movement verification
     int32_t initialPosition = feedMotor->getCurrentPosition();
-    Serial.println("RELOAD: Initial motor position: " + String(initialPosition));
     
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
     
-    // Check motor state before starting
-    Serial.println("RELOAD: Motor state before start - isRunning(): " + String(feedMotor->isRunning()));
-    
     feedMotor->move(-RELOAD_STEPS); // Move 5000 steps in reverse direction
     reloadMotorMoving = true;
     reloadStartTime = millis();
-    Serial.println("RELOAD: Feed motor started - moving " + String(RELOAD_STEPS) + " steps backward for reload operation");
-    Serial.println("RELOAD: Timeout initialized at " + String(reloadStartTime) + "ms, will timeout at " + String(reloadStartTime + RELOAD_TIMEOUT_MS) + "ms");
+    Serial.println("RELOAD: Feed motor started - moving " + String(RELOAD_STEPS) + " steps backward");
     
     // Verify motor is actually running
     delay(10); // Brief delay to let motor start
     if (feedMotor->isRunning()) {
-      Serial.println("RELOAD: Motor verification - feedMotor->isRunning() = TRUE");
-      
       // Check if position actually changed (motor is moving)
       delay(100); // Wait a bit longer to see movement
       int32_t newPosition = feedMotor->getCurrentPosition();
-      Serial.println("RELOAD: Motor position after 100ms: " + String(newPosition));
       if (newPosition == initialPosition) {
-        Serial.println("RELOAD: WARNING - Motor position unchanged - motor may not be moving despite isRunning() = TRUE");
+        Serial.println("RELOAD: WARNING - Motor position unchanged - motor may not be moving");
       } else {
         Serial.println("RELOAD: Motor movement confirmed - position changed from " + String(initialPosition) + " to " + String(newPosition));
       }
     } else {
-      Serial.println("RELOAD: WARNING - Motor verification - feedMotor->isRunning() = FALSE");
-      Serial.println("RELOAD: Motor may not be running despite start command");
-      Serial.println("RELOAD: Check motor enable state and connections");
+      Serial.println("RELOAD: WARNING - Motor not running despite start command");
     }
   } else {
     Serial.println("RELOAD: ERROR - feedMotor pointer is NULL");
@@ -117,11 +99,10 @@ void updateReloadState() {
   //! ************************************************************************
   // Check if right switch is turned off during operation - return to idle immediately
   if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
-    Serial.println("RELOAD: RIGHT SWITCH TURNED OFF - Stopping operation and returning to IDLE");
+    Serial.println("RELOAD: Right switch turned OFF - stopping operation");
     
     // Stop the feed motor immediately
     if (feedMotor && feedMotor->isRunning()) {
-      Serial.println("RELOAD: Stopping feed motor due to run cycle switch OFF");
       feedMotor->forceStop();
       
       // Verify motor actually stopped
@@ -135,8 +116,6 @@ void updateReloadState() {
         } else {
           Serial.println("RELOAD: Motor stopped successfully on second attempt");
         }
-      } else {
-        Serial.println("RELOAD: Motor stopped successfully");
       }
       
       reloadMotorMoving = false;
@@ -166,11 +145,6 @@ void updateReloadState() {
     
     if (elapsedTime >= RELOAD_TIMEOUT_MS) {
       Serial.println("RELOAD: TIMEOUT DETECTED at " + String(elapsedTime) + "ms");
-      Serial.println("RELOAD: Timeout trigger details:");
-      Serial.println("RELOAD:   - reloadMotorMoving: " + String(reloadMotorMoving));
-      Serial.println("RELOAD:   - feedMotor exists: " + String(feedMotor ? "YES" : "NO"));
-      Serial.println("RELOAD:   - feedMotor->isRunning(): " + String(feedMotor ? (feedMotor->isRunning() ? "TRUE" : "FALSE") : "N/A"));
-      Serial.println("RELOAD:   - elapsed time: " + String(millis() - reloadStartTime) + "ms");
       Serial.println("RELOAD: Returning to IDLE - cycle switch must be flipped OFF and ON to reset");
       
       // Stop the feed motor immediately
@@ -189,8 +163,6 @@ void updateReloadState() {
           } else {
             Serial.println("RELOAD: Motor stopped successfully on second attempt");
           }
-        } else {
-          Serial.println("RELOAD: Motor stopped successfully");
         }
         
         reloadMotorMoving = false;
@@ -216,9 +188,7 @@ void updateReloadState() {
     // Log every 1000ms for better debugging
     if (elapsedTime - lastDebugTime >= 1000) {
       Serial.println("RELOAD: Motor running for " + String(elapsedTime) + "ms, timeout at " + String(RELOAD_TIMEOUT_MS) + "ms");
-      Serial.println("RELOAD: Debug - reloadMotorMoving: " + String(reloadMotorMoving));
       if (feedMotor) {
-        Serial.println("RELOAD: Debug - feedMotor->isRunning(): " + String(feedMotor->isRunning()));
         // Additional motor state verification
         if (!feedMotor->isRunning()) {
           Serial.println("RELOAD: WARNING - Motor stopped unexpectedly at " + String(elapsedTime) + "ms");
@@ -242,7 +212,6 @@ void updateReloadState() {
     reloadMotorMoving = false;
     
     Serial.println("RELOAD: Movement complete - " + String(RELOAD_STEPS) + " steps completed");
-    Serial.println("RELOAD: Extending clamp to secure wood in new position");
     
     // Extend clamp to secure wood in new position
     extendClamp();
@@ -264,9 +233,6 @@ void updateReloadState() {
 void exitReloadState() {
   // Clean up state variables
   Serial.println("RELOAD: Exiting state - cleaning up variables");
-  Serial.println("RELOAD: Exit state - reloadMotorMoving: " + String(reloadMotorMoving));
   
   reloadMotorMoving = false;
-  
-  Serial.println("RELOAD: Exit state - variables reset");
 }

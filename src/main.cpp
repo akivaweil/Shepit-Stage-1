@@ -55,33 +55,33 @@ void processSerialCommand(String command) {
   // Motor enable/disable commands (motors now use sleep mode)
   if (command == "enablefeed") {
     enableAllMotors();
-    Serial.println("Feed motor ENABLED (sleep mode after 3 seconds)");
+    Serial.println("Feed motor enabled (sleep mode after 3 seconds)");
   }
   else if (command == "disablefeed") {
     disableFeedMotor();
-    Serial.println("Feed motor DISABLED");
+    Serial.println("Feed motor disabled");
   }
   else if (command == "enablecut") {
     enableAllMotors();
-    Serial.println("Cut motor ENABLED (sleep mode after 3 seconds)");
+    Serial.println("Cut motor enabled (sleep mode after 3 seconds)");
   }
   else if (command == "disablecut") {
     disableCutMotor();
-    Serial.println("Cut motor DISABLED");
+    Serial.println("Cut motor disabled");
   }
   else if (command == "disableall") {
     disableAllMotorsAfterDelay();
-    Serial.println("All motors DISABLED");
+    Serial.println("All motors disabled");
   }
   
   // Pneumatic clamp commands
   else if (command == "clampextend") {
     extendClamp();
-    Serial.println("Pneumatic clamp EXTENDED");
+    Serial.println("Clamp: EXTENDED");
   }
   else if (command == "clampretract") {
     retractClamp();
-    Serial.println("Pneumatic clamp RETRACTED");
+    Serial.println("Clamp: RETRACTED");
   }
   
   // Feed motor movement commands
@@ -89,14 +89,14 @@ void processSerialCommand(String command) {
     if (feedMotor) {
       retractClamp(); // Retract clamp before feed motor movement
       feedMotor->move(feedMotorSteps);
-      Serial.println("Feed motor moving forward");
+      Serial.println("Feed motor: moving forward");
     }
   }
   else if (command == "feedbackward") {
     if (feedMotor) {
       retractClamp(); // Retract clamp before feed motor movement
       feedMotor->move(-feedMotorSteps);
-      Serial.println("Feed motor moving backward");
+      Serial.println("Feed motor: moving backward");
     }
   }
   else if (command == "feedstop") {
@@ -310,7 +310,7 @@ void setup() {
   // Enable motors on startup (will enter sleep mode after 3 seconds of idle)
   digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
-  Serial.println("Motors ENABLED on startup - sleep mode after 3 seconds of idle");
+  Serial.println("Motors enabled on startup - sleep mode after 3 seconds of idle");
   
   // Initialize state machine
   Serial.println("Initializing state machine...");

@@ -73,7 +73,7 @@ void disableAllMotorsAfterDelay() {
     digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable
     digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
     motorsEnabled = false;
-    Serial.println("*** SLEEP MODE - All motors DISABLED after 3 seconds of idle ***");
+    Serial.println("Sleep mode: motors disabled (3 second timeout)");
   }
 }
 
@@ -166,7 +166,7 @@ void startContinuousFeed() {
     // Explicitly enable motors if they're disabled (wake from sleep mode)
     if (!motorsEnabled) {
       enableAllMotors();
-      Serial.println("Motors enabled for continuous feed operation");
+      Serial.println("Motors enabled for continuous feed");
     }
     
     // Retract clamp before feed motor movement
