@@ -373,3 +373,90 @@ void initializeStateMachine() {
 
 // Reload state
 #include "../STATES/04_RELOAD.cpp"
+
+//* ************************************************************************
+//* *********************** STATE MACHINE RESET FUNCTIONS *********************
+//* ************************************************************************
+
+// External references to state variables that need resetting
+extern CuttingStep currentStep; // From CUTTING state
+extern bool cutMotorStarted;    // From CUTTING state
+extern int32_t cutStartPosition; // From CUTTING state
+extern bool returnMotorStarted;  // From CUTTING state
+extern int32_t returnStartPosition; // From CUTTING state
+
+void resetAllStateMachineFlags() {
+  Serial.println("=== RESETTING ALL STATE MACHINE FLAGS ===");
+  
+  // Reset global state machine flags
+  emergencyStopRequested = false;
+  manualMode = false;
+  
+  // Reset feed motor timeout lock
+  if (feedMotorTimeoutLocked) {
+    feedMotorTimeoutLocked = false;
+    Serial.println("Feed motor timeout lock RESET");
+  }
+  
+  // Reset motor enable tracking
+  waitingForMotorEnable = false;
+  motorEnableStartTime = 0;
+  
+  // Reset activity tracking
+  lastActivityTime = millis();
+  
+  // Reset cycle tracking
+  cycleStartTime = 0;
+  
+  Serial.println("All state machine flags have been reset");
+  Serial.println("System is now in a clean state");
+}
+
+// Function to reset cutting cycle specific flags
+void resetCuttingCycleFlags() {
+  Serial.println("=== RESETTING CUTTING CYCLE FLAGS ===");
+  
+  // Reset cutting step to beginning
+  currentStep = STEP_ACTIVATE_MOTORS;
+  
+  // Reset cut motor flags
+  cutMotorStarted = false;
+  cutStartPosition = 0;
+  
+  // Reset return motor flags
+  returnMotorStarted = false;
+  returnStartPosition = 0;
+  
+  Serial.println("Cutting cycle flags reset - ready for new cycle");
+}
+
+// Function to reset feed motor related flags
+void resetFeedMotorFlags() {
+  Serial.println("=== RESETTING FEED MOTOR FLAGS ===");
+  
+  // Reset feed motor timeout lock
+  if (feedMotorTimeoutLocked) {
+    feedMotorTimeoutLocked = false;
+    Serial.println("Feed motor timeout lock RESET");
+  }
+  
+  Serial.println("Feed motor flags reset");
+}
+
+// Function to reset all motor movement flags
+void resetMotorMovementFlags() {
+  Serial.println("=== RESETTING MOTOR MOVEMENT FLAGS ===");
+  
+  // Stop any running motors
+  if (feedMotor && feedMotor->isRunning()) {
+    feedMotor->forceStop();
+    Serial.println("Feed motor stopped during reset");
+  }
+  
+  if (cutMotor && cutMotor->isRunning()) {
+    cutMotor->forceStop();
+    Serial.println("Cut motor stopped during reset");
+  }
+  
+  Serial.println("Motor movement flags reset - all motors stopped");
+}

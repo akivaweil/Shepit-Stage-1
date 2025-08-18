@@ -6,29 +6,23 @@
 //* ************************************************************************
 //* ************************ CUTTING STATE ********************************
 //* ************************************************************************
-// The CUTTING state implements a simple 7-step cutting cycle:
-// 1. Activate the cut and feed motors
-// 2. Retract the clamp
-// 3. Feed wood forward until sensor triggers
-// 4. Extend the clamp
-// 5. Cut wood by moving the cut motor forward
-// 6. Return cut motor
-// 7. Check whether the run cycle && wood present sensors are active. If they are, return to step 1. If not, return to idle state and wait.
+// The CUTTING state handles the complete cutting cycle including:
+// 1. Activate motors (cut motor enabled, feed motor enabled)
+// 2. Retract clamp for movement
+// 3. Feed wood forward until distance sensor triggers
+// 4. Extend clamp to secure wood
+// 5. Cut wood by moving cut motor forward
+// 6. Return cut motor to starting position
+// 7. Check conditions for next cycle or complete
+//
+// This state automatically cycles through all steps and can restart
+// for multiple cuts if conditions remain met (wood present + run cycle active)
+// After completion, automatically transitions to RELOAD state to clear cutting area
 
-// Wood distance sensor debouncer
+// Distance sensor debouncer for cutting cycle
 static Bounce2::Button cuttingDistanceSensor = Bounce2::Button();
 
-// Cutting cycle steps
-enum CuttingStep {
-  STEP_ACTIVATE_MOTORS,    // Step 1: Activate cut and feed motors
-  STEP_RETRACT_CLAMP,      // Step 2: Retract the clamp
-  STEP_FEED_FORWARD,       // Step 3: Feed wood forward until sensor triggers
-  STEP_EXTEND_CLAMP,       // Step 4: Extend the clamp
-  STEP_CUT_WOOD,           // Step 5: Cut wood by moving cut motor forward
-  STEP_RETURN_CUT_MOTOR,   // Step 6: Return cut motor
-  STEP_CHECK_CONDITIONS    // Step 7: Check conditions for next cycle
-};
-
+// Cutting cycle step tracking
 static CuttingStep currentStep = STEP_ACTIVATE_MOTORS;
 
 //! ************************************************************************
@@ -66,27 +60,16 @@ void enterCuttingState() {
   cuttingDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   cuttingDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
+  // Reset cutting cycle flags for new cycle
+  resetCuttingCycleFlags();
+  
   // Enable motors
   enableAllMotors();
-  
-  // Start at step 1
-  currentStep = STEP_ACTIVATE_MOTORS;
   
   // Ensure feed motor is stopped before starting
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
   }
-  
-  //! ************************************************************************
-  //! RESET ALL CUT CYCLE FLAGS AND VARIABLES
-  //! ************************************************************************
-  // Reset all static variables and flags to ensure clean start of each cycle
-  
-  // Reset cut motor step flags
-  resetCutMotorStepFlags();
-  
-  // Reset return motor step flags  
-  resetReturnMotorStepFlags();
   
   Serial.println("CUTTING: All cut cycle flags and variables reset for new cycle");
 }
@@ -328,32 +311,18 @@ void updateCheckConditionsStep() {
     //! ************************************************************************
     // After cutting is complete, automatically transition to reload to clear the cutting area
     // This ensures the operator doesn't have to reach in near the spinning saw blade
+    
+    // Reset all cutting cycle flags before transitioning
+    resetCuttingCycleFlags();
+    
     Serial.println("CUTTING: Automatically transitioning to RELOAD state to clear cutting area");
     transitionToState(STATE_RELOAD);
   }
 }
 
 //* ************************************************************************
-//* *********************** FLAG RESET FUNCTIONS **************************
+//* *********************** EXIT FUNCTION **************************
 //* ************************************************************************
-// These functions reset all static variables and flags used in the cutting cycle steps
-// They ensure each new cutting cycle starts with clean state
-
-void resetCutMotorStepFlags() {
-  // Reset cut motor step tracking variables
-  cutMotorStarted = false;
-  cutStartPosition = 0;
-  
-  Serial.println("CUTTING: Cut motor step flags reset");
-}
-
-void resetReturnMotorStepFlags() {
-  // Reset return motor step tracking variables
-  returnMotorStarted = false;
-  returnStartPosition = 0;
-  
-  Serial.println("CUTTING: Return motor step flags reset");
-}
 
 void exitCuttingState() {
   // Ensure feed motor is stopped before exiting
@@ -361,6 +330,6 @@ void exitCuttingState() {
     feedMotor->forceStop();
   }
   
-  // Reset to step 1
-  currentStep = STEP_ACTIVATE_MOTORS;
+  // Note: Cutting cycle flags are now reset by resetCuttingCycleFlags() 
+  // which is called before transitioning to RELOAD state
 } 

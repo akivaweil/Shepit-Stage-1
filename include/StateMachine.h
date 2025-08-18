@@ -17,6 +17,17 @@ enum SystemState {
   STATE_RELOAD = 4
 };
 
+// Cutting cycle step enumeration
+enum CuttingStep {
+  STEP_ACTIVATE_MOTORS,    // Step 1: Activate cut and feed motors
+  STEP_RETRACT_CLAMP,      // Step 2: Retract the clamp
+  STEP_FEED_FORWARD,       // Step 3: Feed wood forward until sensor triggers
+  STEP_EXTEND_CLAMP,       // Step 4: Extend the clamp
+  STEP_CUT_WOOD,           // Step 5: Cut wood by moving cut motor forward
+  STEP_RETURN_CUT_MOTOR,   // Step 6: Return cut motor
+  STEP_CHECK_CONDITIONS    // Step 7: Check conditions for next cycle
+};
+
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
 //* ************************************************************************
@@ -73,6 +84,12 @@ void disableCutMotor();
 void resetFeedMotorTimeoutLock();
 bool isFeedMotorTimeoutLocked();
 void setFeedMotorTimeoutLocked(bool locked);
+
+// State machine reset functions
+void resetAllStateMachineFlags();
+void resetCuttingCycleFlags();
+void resetFeedMotorFlags();
+void resetMotorMovementFlags();
 
 // Pneumatic clamp control functions
 void extendClamp();

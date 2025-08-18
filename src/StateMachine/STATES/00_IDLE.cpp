@@ -52,6 +52,10 @@ static unsigned long lastClampStateChange = 0;
 static const unsigned long CLAMP_STATE_CHANGE_DELAY = 200; // 200ms minimum delay between clamp state changes
 
 void enterIdleState() {
+  // Reset all state machine flags when entering IDLE state
+  // This ensures a clean start and prevents any lingering flags from previous states
+  resetAllStateMachineFlags();
+  
   // Initialize wood sensor monitoring
   idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
   idleWoodSensor.interval(sensorDebounceTime); // Standard sensor debounce
