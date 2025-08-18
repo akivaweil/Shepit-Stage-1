@@ -316,15 +316,12 @@ void updateIdleState() {
   // Check for right switch activation (active HIGH - switch reads 1 when triggered)
   if (rightSwitch.rose()) {
     Serial.println("RIGHT SWITCH TRIGGERED - Starting RELOAD MODE");
-    Serial.println("RELOAD MODE: Cut motor activated, clamp retracted, feed motor reversing");
-    startReloadMode();
+    Serial.println("RELOAD MODE: Starting 5000-step reverse movement");
+    transitionToState(STATE_RELOAD);
   }
   
-  // Check for right switch deactivation (switch released)
-  if (rightSwitch.fell()) {
-    Serial.println("RIGHT SWITCH RELEASED - Stopping RELOAD MODE");
-    stopReloadMode();
-  }
+  // Note: Right switch deactivation is now handled by the reload state itself
+  // The reload state will automatically return to IDLE when the switch is released
   
   // Check for red button activation (active HIGH - button reads 1 when pressed)
   if (redButton.rose()) {

@@ -210,12 +210,12 @@ void processSerialCommand(String command) {
   // Reload mode commands
   else if (command == "reload") {
     if (isSystemIdle()) {
-      // Check if run cycle switch is active before starting reload mode
-      if (isRunCycleSwitchActive()) {
-        Serial.println("Starting reload mode - RUN CYCLE SWITCH ACTIVE");
+      // Check if right switch is active before starting reload mode
+      if (digitalRead(RIGHT_SWITCH_PIN) == HIGH) {
+        Serial.println("Starting reload mode - RIGHT SWITCH ACTIVE");
         transitionToState(STATE_RELOAD);
       } else {
-        Serial.println("Cannot start reload mode - RUN CYCLE SWITCH NOT ACTIVE");
+        Serial.println("Cannot start reload mode - RIGHT SWITCH NOT ACTIVE");
       }
     } else {
       Serial.println("Cannot start reload mode - system busy, current state: " + getCurrentStateName());

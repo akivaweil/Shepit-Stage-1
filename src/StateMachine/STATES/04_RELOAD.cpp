@@ -36,9 +36,9 @@ void enterReloadState() {
   reloadTimeoutOccurred = false;
   reloadMovementComplete = false;
   
-  // Check if run cycle switch is still active before proceeding
-  if (!isRunCycleSwitchActive()) {
-    Serial.println("RELOAD: RUN CYCLE SWITCH NOT ACTIVE - Returning to IDLE immediately");
+  // Check if right switch is still active before proceeding
+  if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
+    Serial.println("RELOAD: RIGHT SWITCH NOT ACTIVE - Returning to IDLE immediately");
     transitionToState(STATE_IDLE);
     return;
   }
@@ -120,11 +120,11 @@ void enterReloadState() {
 
 void updateReloadState() {
   //! ************************************************************************
-  //! SAFETY CHECK: CYCLE SWITCH DEACTIVATION DETECTION
+  //! SAFETY CHECK: RIGHT SWITCH DEACTIVATION DETECTION
   //! ************************************************************************
-  // Check if run cycle switch is turned off during operation - return to idle immediately
-  if (!isRunCycleSwitchActive()) {
-    Serial.println("RELOAD: RUN CYCLE SWITCH TURNED OFF - Stopping operation and returning to IDLE");
+  // Check if right switch is turned off during operation - return to idle immediately
+  if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
+    Serial.println("RELOAD: RIGHT SWITCH TURNED OFF - Stopping operation and returning to IDLE");
     
     // Stop the feed motor immediately
     if (feedMotor && feedMotor->isRunning()) {
