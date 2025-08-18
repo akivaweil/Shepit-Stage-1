@@ -27,7 +27,7 @@ void enterManualState() {
   // Set manual mode flag for serial command processing only
   manualMode = true;
   
-  Serial.println("Manual mode active - motors permanently enabled for serial commands");
+  Serial.println("Manual mode: motors permanently enabled for serial commands");
   Serial.println("Type 'exit' to return to normal operation");
 }
 

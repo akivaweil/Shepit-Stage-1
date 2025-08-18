@@ -81,12 +81,6 @@ void enterFeedToDistanceState() {
     delay(50); // Give motors time to enable
   }
   
-  Serial.println("FEED_TO_DISTANCE: Motor enable state - motorsEnabled: " + String(motorsEnabled));
-  
-  // Check actual motor enable pin state
-  Serial.println("FEED_TO_DISTANCE: Feed motor enable pin state: " + String(digitalRead(FEED_MOTOR_ENABLE_PIN)));
-  Serial.println("FEED_TO_DISTANCE: Cut motor enable pin state: " + String(digitalRead(CUT_MOTOR_ENABLE_PIN)));
-  
   // Start with clamp retracted for feed motor movement
   retractClamp();
   
@@ -104,43 +98,31 @@ void enterFeedToDistanceState() {
       return;
     }
     
-    Serial.println("FEED_TO_DISTANCE: Configuring feed motor - Speed: " + String(feedMotorSpeed) + "Hz, Accel: " + String(feedMotorAcceleration));
-    
     // Get initial position for movement verification
     int32_t initialPosition = feedMotor->getCurrentPosition();
-    Serial.println("FEED_TO_DISTANCE: Initial motor position: " + String(initialPosition));
     
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
-    
-    // Check motor state before starting
-    Serial.println("FEED_TO_DISTANCE: Motor state before start - isRunning(): " + String(feedMotor->isRunning()));
     
     feedMotor->runForward(); // Continuous forward movement
     feedMotorMoving = true;
     feedStartTime = millis();
     lastTimeoutCheck = millis(); // Initialize timeout check time
     Serial.println("Feed motor started - moving forward until distance sensor triggered");
-    Serial.println("FEED_TO_DISTANCE: Timeout initialized at " + String(feedStartTime) + "ms, will timeout at " + String(feedStartTime + 2000) + "ms");
     
     // Verify motor is actually running
     delay(10); // Brief delay to let motor start
     if (feedMotor->isRunning()) {
-      Serial.println("FEED_TO_DISTANCE: Motor verification - feedMotor->isRunning() = TRUE");
-      
       // Check if position actually changed (motor is moving)
       delay(100); // Wait a bit longer to see movement
       int32_t newPosition = feedMotor->getCurrentPosition();
-      Serial.println("FEED_TO_DISTANCE: Motor position after 100ms: " + String(newPosition));
       if (newPosition == initialPosition) {
-        Serial.println("FEED_TO_DISTANCE: WARNING - Motor position unchanged - motor may not be moving despite isRunning() = TRUE");
+        Serial.println("FEED_TO_DISTANCE: WARNING - Motor position unchanged - motor may not be moving");
       } else {
         Serial.println("FEED_TO_DISTANCE: Motor movement confirmed - position changed from " + String(initialPosition) + " to " + String(newPosition));
       }
     } else {
-      Serial.println("FEED_TO_DISTANCE: WARNING - Motor verification - feedMotor->isRunning() = FALSE");
-      Serial.println("FEED_TO_DISTANCE: Motor may not be running despite start command");
-      Serial.println("FEED_TO_DISTANCE: Check motor enable state and connections");
+      Serial.println("FEED_TO_DISTANCE: WARNING - Motor not running despite start command");
     }
   } else {
     Serial.println("FEED_TO_DISTANCE: ERROR - feedMotor pointer is NULL");
@@ -159,11 +141,10 @@ void updateFeedToDistanceState() {
   //! ************************************************************************
   // Check if run cycle switch is turned off during operation - return to idle immediately
   if (!isRunCycleSwitchActive()) {
-    Serial.println("FEED_TO_DISTANCE: RUN CYCLE SWITCH TURNED OFF - Stopping operation and returning to IDLE");
+    Serial.println("FEED_TO_DISTANCE: Run cycle switch turned OFF - stopping operation");
     
     // Stop the feed motor immediately
     if (feedMotor && feedMotor->isRunning()) {
-      Serial.println("FEED_TO_DISTANCE: Stopping feed motor due to run cycle switch OFF");
       feedMotor->forceStop();
       
       // Verify motor actually stopped

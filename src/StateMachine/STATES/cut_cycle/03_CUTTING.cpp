@@ -73,6 +73,13 @@ void updateCuttingState() {
   // Update distance sensor
   cuttingDistanceSensor.update();
   
+  // Debug current step
+  static CuttingStep lastStep = currentStep;
+  if (currentStep != lastStep) {
+    Serial.println("CUTTING: Step changed from " + String(lastStep) + " to " + String(currentStep));
+    lastStep = currentStep;
+  }
+  
   // Handle different steps of the cutting cycle
   switch (currentStep) {
     case STEP_ACTIVATE_MOTORS:
@@ -245,6 +252,7 @@ void updateReturnCutMotorStep() {
     if (abs(currentPosition - targetPosition) > 10) {
       Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
       Serial.println("CUTTING: Return starting position: " + String(returnStartPosition));
+      Serial.println("CUTTING: Current position: " + String(currentPosition) + ", Target: " + String(targetPosition));
       
       // Configure motor for return movement (faster speed)
       cutMotor->setSpeedInHz(cutMotorReturnSpeed);
@@ -252,6 +260,9 @@ void updateReturnCutMotorStep() {
       
       // Start return movement
       cutMotor->move(-cutMotorSteps);
+    } else {
+      Serial.println("CUTTING: Already at return target position - skipping return movement");
+      Serial.println("CUTTING: Current: " + String(currentPosition) + ", Target: " + String(targetPosition));
     }
   }
   
@@ -271,6 +282,7 @@ void updateReturnCutMotorStep() {
       Serial.println("CUTTING: Step 6 complete - moving to Step 7 (Check Conditions)");
     } else {
       Serial.println("CUTTING: WARNING - Return position verification failed, motor may not have returned correctly");
+      Serial.println("CUTTING: Current: " + String(currentPosition) + ", Expected: " + String(expectedPosition));
       // Try to move to correct return position
       cutMotor->moveTo(expectedPosition);
     }

@@ -206,11 +206,13 @@ void updateIdleState() {
   if (runCycleActive != lastRunCycleState) {
     if (runCycleActive) {
       Serial.println("Cycle switch: ON - checking feed motor conditions");
-      // Force a re-evaluation of feed motor state
-      if (feedMotorShouldRun && !feedMotorWasRunning) {
-        feedMotorWasRunning = false; // Force the motor to start
-        Serial.println("Forcing feed motor state update due to cycle switch ON");
-      }
+      // CRITICAL FIX: Reset the was-running flag when cycle switch turns ON
+      // This forces the motor to start if conditions are met
+      feedMotorWasRunning = false;
+      // CRITICAL FIX: Also reset the should-run state to force re-evaluation
+      feedMotorShouldRun = false;
+      Serial.println("Forcing feed motor state update due to cycle switch ON");
+      Serial.println("Debug: feedMotorShouldRun=" + String(feedMotorShouldRun) + ", feedMotorWasRunning=" + String(feedMotorWasRunning));
     } else {
       Serial.println("Cycle switch: OFF - stopping feed motor");
       // Ensure feed motor stops immediately
@@ -219,6 +221,9 @@ void updateIdleState() {
         feedMotorWasRunning = false;
         feedMotorTimeoutOccurred = false;
       }
+      // CRITICAL FIX: Reset state tracking when cycle switch turns OFF
+      // This ensures clean state when switch is turned back ON
+      feedMotorShouldRun = false;
     }
     lastRunCycleState = runCycleActive;
   }
@@ -306,6 +311,13 @@ void updateIdleState() {
       // Update the tracking variable
       feedMotorWasRunning = feedMotorShouldRun;
     }
+  } else {
+    // Debug: Log when state variables are the same (this might indicate the issue)
+    static unsigned long lastDebugTime = 0;
+    if (millis() - lastDebugTime >= 1000) { // Log every second
+      Serial.println("Debug: feedMotorShouldRun=" + String(feedMotorShouldRun) + ", feedMotorWasRunning=" + String(feedMotorWasRunning) + ", runCycleActive=" + String(runCycleActive) + ", woodPresent=" + String(woodPresent));
+      lastDebugTime = millis();
+    }
   }
   
   //! ************************************************************************
@@ -320,6 +332,8 @@ void updateIdleState() {
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
+      // CRITICAL FIX: Update state tracking when emergency stopping
+      feedMotorShouldRun = false;
       return; // Exit early to prevent further processing
     }
     
@@ -329,6 +343,8 @@ void updateIdleState() {
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
+      // CRITICAL FIX: Update state tracking when emergency stopping
+      feedMotorShouldRun = false;
       return; // Exit early to prevent further processing
     }
   }
