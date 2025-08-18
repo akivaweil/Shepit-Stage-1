@@ -77,6 +77,7 @@ void disableAllMotorsAfterDelay() {
 void checkMotorTimeout() {
   // Sleep mode: disable motors after 3 seconds in idle state
   // BUT only if feed motor is not running (to prevent relay flickering)
+  // Also don't disable motors during reload state
   if (currentSystemState == STATE_IDLE) {
     // Check if feed motor is currently running
     bool feedMotorRunning = (feedMotor && feedMotor->isRunning());
@@ -86,6 +87,7 @@ void checkMotorTimeout() {
       disableAllMotorsAfterDelay();
     }
   }
+  // Note: Motors remain enabled during reload state to prevent interruption
 }
 
 // Individual motor control functions maintained for manual commands
@@ -193,53 +195,29 @@ void stopContinuousFeed() {
 //* ************************************************************************
 //* *********************** RELOAD MODE FUNCTIONS *************************
 //* ************************************************************************
+// Note: Reload mode is now handled by the dedicated STATE_RELOAD state
+// These functions are kept for backward compatibility but are deprecated
 
-// Global flag to indicate reload mode is active
+// Global flag to indicate reload mode is active (deprecated - use state machine instead)
 bool reloadModeActive = false;
 
 void startReloadMode() {
-  if (feedMotor && cutMotor) {
-    // Set reload mode flag to prevent idle state from interfering
-    reloadModeActive = true;
-    
-    // Explicitly enable motors if they're disabled (wake from sleep mode)
-    if (!motorsEnabled) {
-      enableAllMotors();
-      Serial.println("Motors enabled for reload mode operation");
-    }
-    
-    // Keep cut motor ENABLED but NOT MOVING (just powered and ready)
-    // cutMotor is already enabled via enableAllMotors() - no movement commands
-    
-    // Retract clamp to allow wood movement
-    retractClamp();
-    
-    // Start feed motor in reverse (backward) for reloading
-    feedMotor->setSpeedInHz(feedMotorSpeed);
-    feedMotor->runBackward();
-    
-    // Reset motor timeout to keep motors enabled
-    resetMotorTimeout();
-    
-    Serial.println("RELOAD MODE ACTIVATED - Cut motor ENABLED (not moving), clamp retracted, feed motor reversing");
+  // Deprecated function - use transitionToState(STATE_RELOAD) instead
+  Serial.println("WARNING: startReloadMode() is deprecated - use 'reload' command instead");
+  if (isSystemIdle()) {
+    transitionToState(STATE_RELOAD);
+  } else {
+    Serial.println("Cannot start reload mode - system busy");
   }
 }
 
 void stopReloadMode() {
-  if (feedMotor && cutMotor) {
-    // Clear reload mode flag
-    reloadModeActive = false;
-    
-    // Stop the feed motor
-    feedMotor->forceStop();
-    
-    // Cut motor stays enabled (no need to stop what wasn't moving)
-    // Motors remain enabled for next operation
-    
-    // Extend clamp to secure wood
-    extendClamp();
-    
-    Serial.println("RELOAD MODE DEACTIVATED - Feed motor stopped, cut motor remains enabled, clamp extended to secure wood");
+  // Deprecated function - use transitionToState(STATE_IDLE) instead
+  Serial.println("WARNING: stopReloadMode() is deprecated - use 'stopreload' command instead");
+  if (currentSystemState == STATE_RELOAD) {
+    transitionToState(STATE_IDLE);
+  } else {
+    Serial.println("Not in reload mode");
   }
 }
 
@@ -253,6 +231,7 @@ String getCurrentStateName() {
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
     case STATE_MANUAL: return "MANUAL";
+    case STATE_RELOAD: return "RELOAD";
     default: return "UNKNOWN";
   }
 }
@@ -263,7 +242,8 @@ bool isSystemIdle() {
 
 bool isSystemBusy() {
   return (currentSystemState == STATE_FEED_TO_DISTANCE ||
-          currentSystemState == STATE_CUTTING);
+          currentSystemState == STATE_CUTTING ||
+          currentSystemState == STATE_RELOAD);
 }
 
 //* ************************************************************************
@@ -296,7 +276,8 @@ void transitionToState(SystemState newState) {
                    (newState == STATE_IDLE ? "IDLE" : 
                     newState == STATE_FEED_TO_DISTANCE ? "FEED_TO_DISTANCE" :
                     newState == STATE_CUTTING ? "CUTTING" : 
-                    newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN")));
+                    newState == STATE_MANUAL ? "MANUAL" :
+                    newState == STATE_RELOAD ? "RELOAD" : "UNKNOWN")));
     
     // Exit current state
     switch (currentSystemState) {
@@ -304,6 +285,7 @@ void transitionToState(SystemState newState) {
       case STATE_FEED_TO_DISTANCE: exitFeedToDistanceState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
       case STATE_MANUAL: exitManualState(); break;
+      case STATE_RELOAD: exitReloadState(); break;
     }
     
     previousSystemState = currentSystemState;
@@ -315,6 +297,7 @@ void transitionToState(SystemState newState) {
       case STATE_FEED_TO_DISTANCE: enterFeedToDistanceState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
       case STATE_MANUAL: enterManualState(); break;
+      case STATE_RELOAD: enterReloadState(); break;
     }
   }
 }
@@ -326,6 +309,7 @@ void updateStateMachine() {
     case STATE_FEED_TO_DISTANCE: updateFeedToDistanceState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
     case STATE_MANUAL: updateManualState(); break;
+    case STATE_RELOAD: updateReloadState(); break;
   }
 }
 
@@ -361,3 +345,6 @@ void initializeStateMachine() {
 
 // Manual state
 #include "../STATES/06_MANUAL.cpp"
+
+// Reload state
+#include "../STATES/04_RELOAD.cpp"

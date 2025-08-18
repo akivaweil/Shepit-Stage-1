@@ -13,7 +13,8 @@ enum SystemState {
   STATE_IDLE = 0,
   STATE_FEED_TO_DISTANCE = 1,
   STATE_CUTTING = 2,
-  STATE_MANUAL = 3
+  STATE_MANUAL = 3,
+  STATE_RELOAD = 4
 };
 
 //* ************************************************************************
@@ -122,5 +123,9 @@ void resetReturnMotorStepFlags();
 void enterManualState();
 void updateManualState();
 void exitManualState();
+
+void enterReloadState();
+void updateReloadState();
+void exitReloadState();
 
 #endif // STATEMACHINE_H 

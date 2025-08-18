@@ -3,6 +3,9 @@
 #include "Pins_Definitions.h"
 #include <Bounce2.h>
 
+// External state variable reference
+extern SystemState currentSystemState;
+
 //* ************************************************************************
 //* ************************ IDLE STATE ***********************************
 //* ************************************************************************
@@ -129,8 +132,8 @@ void updateIdleState() {
   // Feed motor runs when run cycle switch is ON and wood is present
   // BUT NOT during cutting cycles (safety requirement)
   // AND NOT when locked due to timeout (prevents restart after timeout)
-  // AND NOT when reload mode is active (prevents interference with reload operations)
-  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !feedMotorTimeoutLocked && !reloadModeActive;
+  // AND NOT when in reload state (prevents interference with reload operations)
+  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !feedMotorTimeoutLocked && (currentSystemState != STATE_RELOAD);
   
   // Unlock feed motor if conditions change (prevents infinite timeout loop)
   static bool previousRunCycleActive = false;
@@ -196,8 +199,8 @@ void updateIdleState() {
           feedMotor->runForward();
           
           // Start 2-second timeout tracking for feed motor safety
-          // BUT NOT when reload mode is active (reload mode has its own control logic)
-          if (!reloadModeActive) {
+          // BUT NOT when in reload state (reload state has its own control logic)
+          if (currentSystemState != STATE_RELOAD) {
             feedMotorStartTime = millis();
             feedMotorTimeoutOccurred = false;
           }
@@ -235,8 +238,8 @@ void updateIdleState() {
   //! FEED MOTOR TIMEOUT CHECK (2-SECOND SAFETY LIMIT)
   //! ************************************************************************
   // Check if feed motor has been running for more than 2 seconds without distance sensor trigger
-  // BUT NOT when reload mode is active (reload mode has its own control logic)
-  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && !reloadModeActive) {
+  // BUT NOT when in reload state (reload state has its own control logic)
+  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && (currentSystemState != STATE_RELOAD)) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedMotorStartTime;
     

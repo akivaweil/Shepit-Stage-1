@@ -181,6 +181,7 @@ void processSerialCommand(String command) {
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
     Serial.println("Pneumatic clamp: " + String(isClampRetracted() ? "RETRACTED" : "EXTENDED"));
+    Serial.println("Reload mode active: " + String(currentSystemState == STATE_RELOAD ? "YES" : "NO"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
   }
   
@@ -203,6 +204,29 @@ void processSerialCommand(String command) {
       }
     } else {
       Serial.println("Sequence already running - current state: " + getCurrentStateName());
+    }
+  }
+  
+  // Reload mode commands
+  else if (command == "reload") {
+    if (isSystemIdle()) {
+      // Check if run cycle switch is active before starting reload mode
+      if (isRunCycleSwitchActive()) {
+        Serial.println("Starting reload mode - RUN CYCLE SWITCH ACTIVE");
+        transitionToState(STATE_RELOAD);
+      } else {
+        Serial.println("Cannot start reload mode - RUN CYCLE SWITCH NOT ACTIVE");
+      }
+    } else {
+      Serial.println("Cannot start reload mode - system busy, current state: " + getCurrentStateName());
+    }
+  }
+  else if (command == "stopreload") {
+    if (currentSystemState == STATE_RELOAD) {
+      Serial.println("Stopping reload mode and returning to IDLE");
+      transitionToState(STATE_IDLE);
+    } else {
+      Serial.println("Not in reload mode - current state: " + getCurrentStateName());
     }
   }
   
@@ -244,6 +268,8 @@ void processSerialCommand(String command) {
     Serial.println("System:");
     Serial.println("  status - Show system status");
     Serial.println("  sequence - Start cutting sequence manually");
+    Serial.println("  reload - Start reload mode (feed motor reverse)");
+    Serial.println("  stopreload - Stop reload mode and return to IDLE");
     Serial.println("  stop/emergency - Emergency stop");
     Serial.println("  idle - Return to IDLE state");
     Serial.println("  exit - Exit manual mode");
