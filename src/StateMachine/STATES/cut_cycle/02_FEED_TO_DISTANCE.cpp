@@ -20,6 +20,9 @@
 // Wood distance sensor debouncer
 static Bounce2::Button feedDistanceSensor = Bounce2::Button();
 
+// Wood presence sensor debouncer
+static Bounce2::Button woodPresenceSensor = Bounce2::Button();
+
 // Timing variables for the feed to distance sequence
 static unsigned long feedStartTime = 0;
 static bool feedMotorMoving = false;
@@ -32,17 +35,18 @@ static unsigned long lastTimeoutCheck = 0; // Track last timeout check time
 //! ************************************************************************
 //! WOOD DETECTION LOGIC VARIABLES
 //! ************************************************************************
-// Variables to track wood detection state and step counting
+// Variables to track wood detection state (simplified - no step counting)
 static bool woodDetectedAtStart = false;
 static bool woodLostDuringFeed = false;
-static int32_t stepsAfterWoodLost = 0;
-static const int32_t STEPS_AFTER_WOOD_LOST = 1500; // Continue feeding for 1500 steps after losing wood
-static int32_t initialPositionWhenWoodLost = 0;
 
 void enterFeedToDistanceState() {
   // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
   feedDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   feedDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
+  
+  // Initialize wood presence sensor with proper debouncing
+  woodPresenceSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
+  woodPresenceSensor.interval(distanceSensorDebounceTime); // Use same debounce time
   
   // Reset all sequence variables
   feedStartTime = 0;
@@ -58,8 +62,6 @@ void enterFeedToDistanceState() {
   //! ************************************************************************
   woodDetectedAtStart = isWoodPresent();
   woodLostDuringFeed = false;
-  stepsAfterWoodLost = 0;
-  initialPositionWhenWoodLost = 0;
   
   Serial.println("FEED_TO_DISTANCE: Wood detection initialized - woodDetectedAtStart: " + String(woodDetectedAtStart ? "YES" : "NO"));
   
@@ -150,6 +152,9 @@ void updateFeedToDistanceState() {
   // Update distance sensor
   feedDistanceSensor.update();
   
+  // Update wood presence sensor
+  woodPresenceSensor.update();
+  
   //! ************************************************************************
   //! WOOD DETECTION LOGIC - CHECK FOR WOOD LOSS DURING FEEDING
   //! ************************************************************************
@@ -157,53 +162,63 @@ void updateFeedToDistanceState() {
   if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
     bool currentWoodPresent = isWoodPresent();
     
+    // Debug wood presence status with debounced sensor values
+    static unsigned long lastWoodCheckTime = 0;
+    if (millis() - lastWoodCheckTime >= 500) { // Log every 500ms
+      int rawWoodSensorValue = digitalRead(WOOD_PRESENT_SENSOR_PIN);
+      int debouncedWoodSensorValue = woodPresenceSensor.read();
+      Serial.println("FEED_TO_DISTANCE: Wood presence check - currentWoodPresent: " + String(currentWoodPresent ? "YES" : "NO") + 
+                    ", raw sensor pin: " + String(rawWoodSensorValue) + 
+                    ", debounced sensor: " + String(debouncedWoodSensorValue) + 
+                    ", woodDetectedAtStart: " + String(woodDetectedAtStart ? "YES" : "NO") + 
+                    ", woodLostDuringFeed: " + String(woodLostDuringFeed ? "YES" : "NO"));
+      lastWoodCheckTime = millis();
+    }
+    
     // Check if wood was detected at start but is now lost
     if (woodDetectedAtStart && !currentWoodPresent && !woodLostDuringFeed) {
       woodLostDuringFeed = true;
-      initialPositionWhenWoodLost = feedMotor ? feedMotor->getCurrentPosition() : 0;
-      Serial.println("FEED_TO_DISTANCE: WOOD LOST DURING FEEDING - Continuing for " + String(STEPS_AFTER_WOOD_LOST) + " steps");
-      Serial.println("FEED_TO_DISTANCE: Initial position when wood lost: " + String(initialPositionWhenWoodLost));
+      Serial.println("FEED_TO_DISTANCE: WOOD LOST DURING FEEDING - Stopping feed motor immediately for safety");
+      
+      // Stop the feed motor immediately when wood is lost
+      if (feedMotor && feedMotor->isRunning()) {
+        Serial.println("FEED_TO_DISTANCE: Stopping feed motor due to wood loss");
+        feedMotor->forceStop();
+        feedMotorMoving = false;
+        
+        // Extend clamp to secure wood in current position
+        extendClamp();
+        
+        // Return to idle state since wood was lost
+        Serial.println("FEED_TO_DISTANCE: Returning to IDLE - wood lost during feeding");
+        transitionToState(STATE_IDLE);
+        return;
+      }
     }
     
     // Continuous check: if wood is lost and we're not in wood detection mode, start it
     if (woodDetectedAtStart && !currentWoodPresent && !woodLostDuringFeed) {
       Serial.println("FEED_TO_DISTANCE: WARNING - Wood lost but wood detection not activated, forcing activation");
       woodLostDuringFeed = true;
-      initialPositionWhenWoodLost = feedMotor ? feedMotor->getCurrentPosition() : 0;
-      Serial.println("FEED_TO_DISTANCE: Forced wood detection activation - Initial position: " + String(initialPositionWhenWoodLost));
-    }
-    
-    // If wood was lost, count steps and check if we've reached the limit
-    if (woodLostDuringFeed && feedMotor) {
-      int32_t currentPosition = feedMotor->getCurrentPosition();
-      stepsAfterWoodLost = abs(currentPosition - initialPositionWhenWoodLost);
       
-      // Debug logging for step counting
-      static unsigned long lastStepLogTime = 0;
-      if (millis() - lastStepLogTime >= 200) { // Log every 200ms
-        Serial.println("FEED_TO_DISTANCE: Wood detection progress - Steps: " + String(stepsAfterWoodLost) + "/" + String(STEPS_AFTER_WOOD_LOST) + 
-                      ", Position: " + String(currentPosition) + ", Initial: " + String(initialPositionWhenWoodLost));
-        lastStepLogTime = millis();
-      }
-      
-      // Check if we've reached the 1500 step limit
-      if (stepsAfterWoodLost >= STEPS_AFTER_WOOD_LOST) {
-        Serial.println("FEED_TO_DISTANCE: Reached " + String(STEPS_AFTER_WOOD_LOST) + " steps after wood loss - stopping feed motor");
-        Serial.println("FEED_TO_DISTANCE: Final position: " + String(currentPosition) + ", Steps moved: " + String(stepsAfterWoodLost));
-        
-        // Stop the feed motor
+      // Stop the feed motor immediately when wood is lost
+      if (feedMotor && feedMotor->isRunning()) {
+        Serial.println("FEED_TO_DISTANCE: Stopping feed motor due to wood loss (forced activation)");
         feedMotor->forceStop();
         feedMotorMoving = false;
         
-        // Extend clamp to secure wood
+        // Extend clamp to secure wood in current position
         extendClamp();
         
-        // Return to idle state since we didn't hit the distance sensor
-        Serial.println("FEED_TO_DISTANCE: Returning to IDLE - distance sensor not reached within step limit");
+        // Return to idle state since wood was lost
+        Serial.println("FEED_TO_DISTANCE: Returning to IDLE - wood lost during feeding (forced activation)");
         transitionToState(STATE_IDLE);
         return;
       }
     }
+    
+    // Note: Removed the 1500-step continuation logic since we now stop immediately when wood is lost
+    // This makes the system more responsive and safer
   }
   
   //! ************************************************************************
@@ -248,13 +263,13 @@ void updateFeedToDistanceState() {
   //! TIMEOUT DETECTION AND HANDLING (2 SECOND LIMIT)
   //! ************************************************************************
   // Check for feed motor timeout (2 seconds) - if motor runs too long without sensor trigger, go to idle
-  // NOTE: Timeout is extended when wood is lost during feeding to allow 1500 steps to complete
+  // Note: Since we now stop immediately when wood is lost, we use a standard 2-second timeout
   if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedStartTime;
     
-    // Calculate timeout duration - extend if wood was lost during feeding
-    unsigned long timeoutDuration = woodLostDuringFeed ? 10000 : 2000; // 10 seconds if wood lost, 2 seconds normal
+    // Use standard 2-second timeout since wood loss now stops motor immediately
+    unsigned long timeoutDuration = 2000; // 2 seconds standard timeout
     
     // Check for timeout every 100ms to ensure reliable detection
     if (currentTime - lastTimeoutCheck >= 100) {
@@ -263,17 +278,11 @@ void updateFeedToDistanceState() {
       // Debug timeout progress
       if (elapsedTime % 500 == 0) { // Log every 500ms
         Serial.println("FEED_TO_DISTANCE: Timeout progress - " + String(elapsedTime) + "ms elapsed, " + String(timeoutDuration - elapsedTime) + "ms remaining");
-        if (woodLostDuringFeed) {
-          Serial.println("FEED_TO_DISTANCE: Extended timeout active due to wood loss - allowing 1500 steps to complete");
-        }
       }
       
       if (elapsedTime >= timeoutDuration) {
         timeoutOccurred = true;
         Serial.println("FEED_TO_DISTANCE: TIMEOUT DETECTED at " + String(elapsedTime) + "ms");
-        if (woodLostDuringFeed) {
-          Serial.println("FEED_TO_DISTANCE: Extended timeout reached - wood detection steps should have completed");
-        }
         Serial.println("FEED_TO_DISTANCE: Timeout variables - feedMotorMoving: " + String(feedMotorMoving) + ", distanceSensorTriggered: " + String(distanceSensorTriggered) + ", timeoutOccurred: " + String(timeoutOccurred));
       }
     }
@@ -281,20 +290,13 @@ void updateFeedToDistanceState() {
   
   // Handle timeout when it occurs - stop motor and extend clamp immediately
   if (timeoutOccurred) {
-    if (woodLostDuringFeed) {
-      Serial.println("FEED_TO_DISTANCE: EXTENDED TIMEOUT - Feed motor ran for 10 seconds after wood loss");
-      Serial.println("FEED_TO_DISTANCE: This should not happen if wood detection logic is working correctly");
-    } else {
-      Serial.println("FEED_TO_DISTANCE: TIMEOUT - Feed motor ran for 2 seconds without triggering distance sensor");
-    }
+    Serial.println("FEED_TO_DISTANCE: TIMEOUT - Feed motor ran for 2 seconds without triggering distance sensor");
     Serial.println("FEED_TO_DISTANCE: Timeout trigger details:");
     Serial.println("FEED_TO_DISTANCE:   - timeoutOccurred: " + String(timeoutOccurred));
     Serial.println("FEED_TO_DISTANCE:   - feedMotorMoving: " + String(feedMotorMoving));
     Serial.println("FEED_TO_DISTANCE:   - feedMotor exists: " + String(feedMotor ? "YES" : "NO"));
     Serial.println("FEED_TO_DISTANCE:   - feedMotor->isRunning(): " + String(feedMotor ? (feedMotor->isRunning() ? "TRUE" : "FALSE") : "N/A"));
     Serial.println("FEED_TO_DISTANCE:   - distanceSensorTriggered: " + String(distanceSensorTriggered));
-    Serial.println("FEED_TO_DISTANCE:   - woodLostDuringFeed: " + String(woodLostDuringFeed));
-    Serial.println("FEED_TO_DISTANCE:   - stepsAfterWoodLost: " + String(stepsAfterWoodLost));
     Serial.println("FEED_TO_DISTANCE:   - elapsed time: " + String(millis() - feedStartTime) + "ms");
     Serial.println("FEED_TO_DISTANCE: Returning to IDLE - cycle switch must be flipped OFF and ON to reset");
     
@@ -337,16 +339,13 @@ void updateFeedToDistanceState() {
     unsigned long elapsedTime = millis() - feedStartTime;
     static unsigned long lastDebugTime = 0;
     
-    // Calculate timeout duration for debug logging
-    unsigned long timeoutDuration = woodLostDuringFeed ? 10000 : 2000;
+    // Use standard 2-second timeout for debug logging
+    unsigned long timeoutDuration = 2000;
     
     // Log every 500ms for better debugging
     if (elapsedTime - lastDebugTime >= 500) {
       Serial.println("FEED_TO_DISTANCE: Motor running for " + String(elapsedTime) + "ms, timeout at " + String(timeoutDuration) + "ms");
       Serial.println("FEED_TO_DISTANCE: Debug - feedMotorMoving: " + String(feedMotorMoving) + ", distanceSensorTriggered: " + String(distanceSensorTriggered));
-      if (woodLostDuringFeed) {
-        Serial.println("FEED_TO_DISTANCE: Wood detection active - stepsAfterWoodLost: " + String(stepsAfterWoodLost) + "/" + String(STEPS_AFTER_WOOD_LOST));
-      }
       if (feedMotor) {
         Serial.println("FEED_TO_DISTANCE: Debug - feedMotor->isRunning(): " + String(feedMotor->isRunning()));
         // Additional motor state verification
@@ -453,8 +452,6 @@ void exitFeedToDistanceState() {
   //! ************************************************************************
   woodDetectedAtStart = false;
   woodLostDuringFeed = false;
-  stepsAfterWoodLost = 0;
-  initialPositionWhenWoodLost = 0;
   
   Serial.println("FEED_TO_DISTANCE: Exit state - variables reset");
 }

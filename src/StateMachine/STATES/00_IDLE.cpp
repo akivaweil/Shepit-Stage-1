@@ -139,6 +139,10 @@ void updateIdleState() {
   static bool previousRunCycleActive = false;
   static bool previousWoodPresent = false;
   
+  // Unlock feed motor when:
+  // 1. Conditions change (wood presence or run cycle switch)
+  // 2. Run cycle switch is turned OFF (allows user to cancel and reset)
+  // 3. Run cycle switch is turned ON after being OFF (allows user to restart)
   if (runCycleActive != previousRunCycleActive || woodPresent != previousWoodPresent) {
     if (feedMotorTimeoutLocked) {
       feedMotorTimeoutLocked = false;
@@ -147,6 +151,30 @@ void updateIdleState() {
     }
     previousRunCycleActive = runCycleActive;
     previousWoodPresent = woodPresent;
+  }
+  
+  // Additional unlock logic: Allow user to reset timeout lock by cycling run cycle switch
+  if (!runCycleActive && feedMotorTimeoutLocked) {
+    // Run cycle switch is OFF and motor is locked - this allows user to cancel
+    // The lock will be cleared when they turn the switch back ON
+    static bool wasLockedWhenSwitchOff = false;
+    if (!wasLockedWhenSwitchOff) {
+      wasLockedWhenSwitchOff = true;
+      Serial.println("Feed motor timeout lock active - turn run cycle switch OFF then ON to reset");
+    }
+  } else if (runCycleActive && feedMotorTimeoutLocked) {
+    // Run cycle switch is ON and motor was locked - clear the lock to allow restart
+    static bool wasLockedWhenSwitchOff = false;
+    if (wasLockedWhenSwitchOff) {
+      feedMotorTimeoutLocked = false;
+      feedMotorTimeoutOccurred = false;
+      wasLockedWhenSwitchOff = false;
+      Serial.println("Feed motor UNLOCKED - run cycle switch cycled, timeout reset");
+    }
+  } else {
+    // Reset the tracking variable when switch is ON and not locked
+    static bool wasLockedWhenSwitchOff = false;
+    wasLockedWhenSwitchOff = false;
   }
   
   // Determine if clamp should be retracted (retracted when feed motor is running)
@@ -213,24 +241,49 @@ void updateIdleState() {
       } else {
         // Feed motor should NOT be running
         if (feedMotor && feedMotor->isRunning()) {
-                  // Stop the feed motor
-        feedMotor->forceStop();
-        
-        // Reset timeout tracking when motor stops
-        feedMotorTimeoutOccurred = false;
-        
-        if (inCuttingCycle) {
-          Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
-        } else if (!runCycleActive) {
-          Serial.println("Feed motor stopped: run cycle switch turned OFF");
-        } else if (!woodPresent) {
-          Serial.println("Feed motor stopped: wood no longer present");
-        }
+          // Stop the feed motor
+          feedMotor->forceStop();
+          
+          // Reset timeout tracking when motor stops
+          feedMotorTimeoutOccurred = false;
+          
+          if (inCuttingCycle) {
+            Serial.println("Feed motor stopped: cutting cycle in progress (safety requirement)");
+          } else if (!runCycleActive) {
+            Serial.println("Feed motor stopped: run cycle switch turned OFF");
+          } else if (!woodPresent) {
+            Serial.println("Feed motor stopped: wood no longer present");
+          }
         }
       }
       
       // Update the tracking variable
       feedMotorWasRunning = feedMotorShouldRun;
+    }
+  }
+  
+  //! ************************************************************************
+  //! IMMEDIATE FEED MOTOR STOP WHEN CONDITIONS CHANGE
+  //! ************************************************************************
+  // Continuously monitor conditions and stop feed motor immediately if they change
+  // This ensures the motor stops as soon as the cycle switch is turned off or wood is removed
+  if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_RELOAD)) {
+    // Check if run cycle switch is still active
+    if (!runCycleActive) {
+      Serial.println("FEED MOTOR STOPPED IMMEDIATELY: Run cycle switch turned OFF");
+      feedMotor->forceStop();
+      feedMotorWasRunning = false;
+      feedMotorTimeoutOccurred = false;
+      return; // Exit early to prevent further processing
+    }
+    
+    // Check if wood is still present
+    if (!woodPresent) {
+      Serial.println("FEED MOTOR STOPPED IMMEDIATELY: Wood no longer present");
+      feedMotor->forceStop();
+      feedMotorWasRunning = false;
+      feedMotorTimeoutOccurred = false;
+      return; // Exit early to prevent further processing
     }
   }
   
@@ -258,7 +311,7 @@ void updateIdleState() {
       feedMotorWasRunning = false;
       
       Serial.println("Feed motor stopped due to 2-second timeout - safety limit reached");
-      Serial.println("Feed motor LOCKED - will not restart until conditions change (run cycle OFF/ON or wood removed)");
+      Serial.println("Feed motor LOCKED - turn run cycle switch OFF then ON to reset and restart");
     }
   }
   
