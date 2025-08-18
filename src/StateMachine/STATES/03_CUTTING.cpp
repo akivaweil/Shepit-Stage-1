@@ -39,6 +39,9 @@ static bool feedMotorTimeoutOccurred = false;
 // Flag to track if wood needs to be moved away from sensor
 static bool needToMoveWoodAway = false;
 
+// Flag to track if wood has been moved away (reset each cycle)
+static bool woodMovedAway = false;
+
 void enterCuttingState() {
   // Check only wood presence at the beginning
   // Run cycle switch is NOT checked here - once cutting cycle starts, it completes
@@ -84,14 +87,19 @@ void enterCuttingState() {
     Serial.println("CUTTING: Stopped feed motor before starting cutting cycle");
   }
   
-  // If distance sensor is already HIGH, we need to move wood away first
-  // But we'll check this AFTER the motor movement, not before
-  bool needToMoveWoodAway = false;
+  // Check if distance sensor is already HIGH (wood already at correct position)
+  // If so, we need to move wood away first to allow proper positioning
   distanceSensor.update();
   if (distanceSensor.read() == HIGH) {
     needToMoveWoodAway = true;
-    Serial.println("CUTTING: Distance sensor already HIGH - will move wood away after motor starts");
+    Serial.println("CUTTING: Distance sensor already HIGH - wood at correct position, will move away first");
+  } else {
+    needToMoveWoodAway = false;
+    Serial.println("CUTTING: Distance sensor LOW - wood needs positioning");
   }
+  
+  // Reset wood movement flag for this cycle
+  woodMovedAway = false;
 }
 
 void updateCuttingState() {
@@ -149,29 +157,28 @@ void updateCuttingState() {
 // IMPORTANT: Run cycle switch is ignored during positioning phase
 
 void updatePositioningPhase() {
-  // Start feed motor if not already started AND distance sensor not yet triggered
-  if (!feedMotorStarted && !distanceSensorTriggered && feedMotor) {
+  // Start feed motor if not already started
+  if (!feedMotorStarted && feedMotor) {
     Serial.println("CUTTING: Starting feed motor for positioning phase");
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
     
-          // Check if we need to move wood away first (sensor was HIGH when entering state)
-      static bool woodMovedAway = false;
-      if (needToMoveWoodAway && !woodMovedAway) {
-        Serial.println("CUTTING: Moving wood away from sensor first (backward movement)");
-        feedMotor->move(-FM_preCutPullback); // Move wood away using config value
-        
-        // Wait for movement to complete
-        while (feedMotor->isRunning()) {
-          delay(10);
-        }
-        
-        // Update sensor after movement
-        delay(50); // Give sensor time to settle
-        distanceSensor.update();
-        Serial.println("CUTTING: After moving wood away, sensor state: " + String(distanceSensor.read()));
-        woodMovedAway = true;
+    // Check if we need to move wood away first (sensor was HIGH when entering state)
+    if (needToMoveWoodAway && !woodMovedAway) {
+      Serial.println("CUTTING: Moving wood away from sensor first (backward movement)");
+      feedMotor->move(-FM_preCutPullback); // Move wood away using config value
+      
+      // Wait for movement to complete
+      while (feedMotor->isRunning()) {
+        delay(10);
       }
+      
+      // Update sensor after movement
+      delay(50); // Give sensor time to settle
+      distanceSensor.update();
+      Serial.println("CUTTING: After moving wood away, sensor state: " + String(distanceSensor.read()));
+      woodMovedAway = true;
+    }
     
     // Now start forward movement for positioning
     feedMotor->runForward(); // Continuous forward movement
@@ -323,6 +330,9 @@ void exitCuttingState() {
   delayStartTime = 0;
   delayComplete = false;
   cycleStarted = false;
+  
+  // Reset wood movement flag for next cycle
+  woodMovedAway = false;
   
   // Motors stay enabled for the next state
   // No need to disable motors here
