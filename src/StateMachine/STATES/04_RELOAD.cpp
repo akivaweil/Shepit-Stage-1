@@ -7,26 +7,10 @@
 extern FastAccelStepper *feedMotor;
 extern FastAccelStepper *cutMotor;
 
-//* ************************************************************************
-//* ************************ RELOAD STATE *********************************
-//* ************************************************************************
-// The RELOAD state handles the reload mode functionality where the feed motor
-// runs in reverse to move wood backward while the cut motor remains enabled
-// but stationary. This allows for repositioning wood without cutting.
-//
-// SAFETY FEATURE: If the run cycle switch is deactivated at any point during
-// this state, the machine will immediately stop the feed motor, extend the clamp
-// to secure the wood, and return to the IDLE state
-//
-// TIMEOUT PROTECTION: The reload mode will automatically stop after 5 seconds
-// if not manually stopped, and the clamp will extend to secure the wood
-
-// Timing variables for the reload sequence
+// SIMPLIFIED: Only essential timing and state variables
 static unsigned long reloadStartTime = 0;
 static bool reloadMotorMoving = false;
-static bool reloadTimeoutOccurred = false;
-static bool reloadMovementComplete = false;
-static const unsigned long RELOAD_TIMEOUT_MS = 10000; // 10 second timeout (increased for step movement)
+static const unsigned long RELOAD_TIMEOUT_MS = 10000; // 10 second timeout
 static const int32_t RELOAD_STEPS = 5000; // 5000 steps in reverse direction
 
 void enterReloadState() {
@@ -44,8 +28,6 @@ void enterReloadState() {
   // Reset all sequence variables
   reloadStartTime = 0;
   reloadMotorMoving = false;
-  reloadTimeoutOccurred = false;
-  reloadMovementComplete = false;
   
   // Check if right switch is still active before proceeding
   if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
@@ -172,7 +154,7 @@ void updateReloadState() {
   //! TIMEOUT DETECTION AND HANDLING (10 SECOND LIMIT)
   //! ************************************************************************
   // Check for reload mode timeout (10 seconds) - if motor runs too long, go to idle
-  if (reloadMotorMoving && !reloadTimeoutOccurred && !reloadMovementComplete) {
+  if (reloadMotorMoving) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - reloadStartTime;
     
@@ -183,59 +165,51 @@ void updateReloadState() {
     }
     
     if (elapsedTime >= RELOAD_TIMEOUT_MS) {
-      reloadTimeoutOccurred = true;
       Serial.println("RELOAD: TIMEOUT DETECTED at " + String(elapsedTime) + "ms");
-      Serial.println("RELOAD: Timeout variables - reloadMotorMoving: " + String(reloadMotorMoving) + ", reloadTimeoutOccurred: " + String(reloadTimeoutOccurred));
-    }
-  }
-  
-  // Handle timeout when it occurs - stop motor and extend clamp immediately
-  if (reloadTimeoutOccurred) {
-    Serial.println("RELOAD: TIMEOUT - Reload mode ran for 10 seconds without completion");
-    Serial.println("RELOAD: Timeout trigger details:");
-    Serial.println("RELOAD:   - reloadTimeoutOccurred: " + String(reloadTimeoutOccurred));
-    Serial.println("RELOAD:   - reloadMotorMoving: " + String(reloadMotorMoving));
-    Serial.println("RELOAD:   - feedMotor exists: " + String(feedMotor ? "YES" : "NO"));
-    Serial.println("RELOAD:   - feedMotor->isRunning(): " + String(feedMotor ? (feedMotor->isRunning() ? "TRUE" : "FALSE") : "N/A"));
-    Serial.println("RELOAD:   - elapsed time: " + String(millis() - reloadStartTime) + "ms");
-    Serial.println("RELOAD: Returning to IDLE - cycle switch must be flipped OFF and ON to reset");
-    
-    // Stop the feed motor immediately
-    if (feedMotor && feedMotor->isRunning()) {
-      Serial.println("RELOAD: Stopping feed motor due to timeout");
-      feedMotor->forceStop();
+      Serial.println("RELOAD: Timeout trigger details:");
+      Serial.println("RELOAD:   - reloadMotorMoving: " + String(reloadMotorMoving));
+      Serial.println("RELOAD:   - feedMotor exists: " + String(feedMotor ? "YES" : "NO"));
+      Serial.println("RELOAD:   - feedMotor->isRunning(): " + String(feedMotor ? (feedMotor->isRunning() ? "TRUE" : "FALSE") : "N/A"));
+      Serial.println("RELOAD:   - elapsed time: " + String(millis() - reloadStartTime) + "ms");
+      Serial.println("RELOAD: Returning to IDLE - cycle switch must be flipped OFF and ON to reset");
       
-      // Verify motor actually stopped
-      delay(10);
-      if (feedMotor->isRunning()) {
-        Serial.println("RELOAD: WARNING - Motor still running after forceStop(), trying again");
+      // Stop the feed motor immediately
+      if (feedMotor && feedMotor->isRunning()) {
+        Serial.println("RELOAD: Stopping feed motor due to timeout");
         feedMotor->forceStop();
+        
+        // Verify motor actually stopped
         delay(10);
         if (feedMotor->isRunning()) {
-          Serial.println("RELOAD: ERROR - Motor still running after multiple stop attempts");
+          Serial.println("RELOAD: WARNING - Motor still running after forceStop(), trying again");
+          feedMotor->forceStop();
+          delay(10);
+          if (feedMotor->isRunning()) {
+            Serial.println("RELOAD: ERROR - Motor still running after multiple stop attempts");
+          } else {
+            Serial.println("RELOAD: Motor stopped successfully on second attempt");
+          }
         } else {
-          Serial.println("RELOAD: Motor stopped successfully on second attempt");
+          Serial.println("RELOAD: Motor stopped successfully");
         }
-      } else {
-        Serial.println("RELOAD: Motor stopped successfully");
+        
+        reloadMotorMoving = false;
       }
       
-      reloadMotorMoving = false;
+      // Extend clamp to secure wood in current position
+      extendClamp();
+      
+      // Return to idle state
+      transitionToState(STATE_IDLE);
+      return;
     }
-    
-    // Extend clamp to secure wood in current position
-    extendClamp();
-    
-    // Return to idle state
-    transitionToState(STATE_IDLE);
-    return;
   }
   
   //! ************************************************************************
   //! DEBUG LOGGING FOR TIMEOUT MONITORING
   //! ************************************************************************
   // Debug logging for timeout troubleshooting
-  if (reloadMotorMoving && !reloadTimeoutOccurred && !reloadMovementComplete) {
+  if (reloadMotorMoving) {
     unsigned long elapsedTime = millis() - reloadStartTime;
     static unsigned long lastDebugTime = 0;
     
@@ -264,8 +238,7 @@ void updateReloadState() {
   //! MOVEMENT COMPLETION DETECTION
   //! ************************************************************************
   // Check if the 5000-step movement is complete
-  if (reloadMotorMoving && !reloadMovementComplete && feedMotor && !feedMotor->isRunning()) {
-    reloadMovementComplete = true;
+  if (reloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
     reloadMotorMoving = false;
     
     Serial.println("RELOAD: Movement complete - " + String(RELOAD_STEPS) + " steps completed");
@@ -291,11 +264,9 @@ void updateReloadState() {
 void exitReloadState() {
   // Clean up state variables
   Serial.println("RELOAD: Exiting state - cleaning up variables");
-  Serial.println("RELOAD: Exit state - reloadMotorMoving: " + String(reloadMotorMoving) + ", reloadTimeoutOccurred: " + String(reloadTimeoutOccurred) + ", reloadMovementComplete: " + String(reloadMovementComplete));
+  Serial.println("RELOAD: Exit state - reloadMotorMoving: " + String(reloadMotorMoving));
   
   reloadMotorMoving = false;
-  reloadTimeoutOccurred = false;
-  reloadMovementComplete = false;
   
   Serial.println("RELOAD: Exit state - variables reset");
 }

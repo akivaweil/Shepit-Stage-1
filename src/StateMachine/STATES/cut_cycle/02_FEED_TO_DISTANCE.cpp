@@ -29,15 +29,11 @@ static bool feedMotorMoving = false;
 static bool distanceSensorTriggered = false;
 static unsigned long delayStartTime = 0;
 static bool delayComplete = false;
-static bool timeoutOccurred = false; // New timeout flag for more reliable detection
-static unsigned long lastTimeoutCheck = 0; // Track last timeout check time
+static bool timeoutOccurred = false;
+static unsigned long lastTimeoutCheck = 0;
 
-//! ************************************************************************
-//! WOOD DETECTION LOGIC VARIABLES
-//! ************************************************************************
-// Variables to track wood detection state (simplified - no step counting)
-static bool woodDetectedAtStart = false;
-static bool woodLostDuringFeed = false;
+// SIMPLIFIED: Remove unnecessary wood detection tracking
+// The system already knows wood is present when entering this state
 
 void enterFeedToDistanceState() {
   // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
@@ -60,14 +56,6 @@ void enterFeedToDistanceState() {
   delayComplete = false;
   timeoutOccurred = false;
   lastTimeoutCheck = 0;
-  
-  //! ************************************************************************
-  //! INITIALIZE WOOD DETECTION LOGIC VARIABLES
-  //! ************************************************************************
-  woodDetectedAtStart = isWoodPresent();
-  woodLostDuringFeed = false;
-  
-  Serial.println("FEED_TO_DISTANCE: Wood detection initialized - woodDetectedAtStart: " + String(woodDetectedAtStart ? "YES" : "NO"));
   
   // Check if run cycle switch is still active before proceeding
   if (!isRunCycleSwitchActive()) {
@@ -165,72 +153,6 @@ void updateFeedToDistanceState() {
   
   // Update wood presence sensor
   woodPresenceSensor.update();
-  
-  //! ************************************************************************
-  //! WOOD DETECTION LOGIC - CHECK FOR WOOD LOSS DURING FEEDING
-  //! ************************************************************************
-  // Monitor wood presence during feeding and handle wood loss logic
-  if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
-    bool currentWoodPresent = isWoodPresent();
-    
-    // Debug wood presence status with debounced sensor values
-    static unsigned long lastWoodCheckTime = 0;
-    if (millis() - lastWoodCheckTime >= 500) { // Log every 500ms
-      int rawWoodSensorValue = digitalRead(WOOD_PRESENT_SENSOR_PIN);
-      int debouncedWoodSensorValue = woodPresenceSensor.read();
-      Serial.println("FEED_TO_DISTANCE: Wood presence check - currentWoodPresent: " + String(currentWoodPresent ? "YES" : "NO") + 
-                    ", raw sensor pin: " + String(rawWoodSensorValue) + 
-                    ", debounced sensor: " + String(debouncedWoodSensorValue) + 
-                    ", woodDetectedAtStart: " + String(woodDetectedAtStart ? "YES" : "NO") + 
-                    ", woodLostDuringFeed: " + String(woodLostDuringFeed ? "YES" : "NO"));
-      lastWoodCheckTime = millis();
-    }
-    
-    // Check if wood was detected at start but is now lost
-    if (woodDetectedAtStart && !currentWoodPresent && !woodLostDuringFeed) {
-      woodLostDuringFeed = true;
-      Serial.println("FEED_TO_DISTANCE: WOOD LOST DURING FEEDING - Stopping feed motor immediately for safety");
-      
-      // Stop the feed motor immediately when wood is lost
-      if (feedMotor && feedMotor->isRunning()) {
-        Serial.println("FEED_TO_DISTANCE: Stopping feed motor due to wood loss");
-        feedMotor->forceStop();
-        feedMotorMoving = false;
-        
-        // Extend clamp to secure wood in current position
-        extendClamp();
-        
-        // Return to idle state since wood was lost
-        Serial.println("FEED_TO_DISTANCE: Returning to IDLE - wood lost during feeding");
-        transitionToState(STATE_IDLE);
-        return;
-      }
-    }
-    
-    // Continuous check: if wood is lost and we're not in wood detection mode, start it
-    if (woodDetectedAtStart && !currentWoodPresent && !woodLostDuringFeed) {
-      Serial.println("FEED_TO_DISTANCE: WARNING - Wood lost but wood detection not activated, forcing activation");
-      woodLostDuringFeed = true;
-      
-      // Stop the feed motor immediately when wood is lost
-      if (feedMotor && feedMotor->isRunning()) {
-        Serial.println("FEED_TO_DISTANCE: Stopping feed motor due to wood loss (forced activation)");
-        feedMotor->forceStop();
-        feedMotorMoving = false;
-        
-        // Extend clamp to secure wood in current position
-        extendClamp();
-        
-        // Return to idle state since wood was lost
-        Serial.println("FEED_TO_DISTANCE: Returning to IDLE - wood lost during feeding (forced activation)");
-        transitionToState(STATE_IDLE);
-        return;
-      }
-    }
-    
-    // Note: Removed the 1500-step continuation logic since we now stop immediately when wood is lost
-    // This makes the system more responsive and safer
-  }
   
   //! ************************************************************************
   //! SAFETY CHECK: CYCLE SWITCH DEACTIVATION DETECTION
@@ -458,11 +380,8 @@ void exitFeedToDistanceState() {
   timeoutOccurred = false;
   lastTimeoutCheck = 0;
   
-  //! ************************************************************************
-  //! RESET WOOD DETECTION LOGIC VARIABLES
-  //! ************************************************************************
-  woodDetectedAtStart = false;
-  woodLostDuringFeed = false;
+  // SIMPLIFIED: Remove unnecessary wood detection tracking
+  // The system already knows wood is present when entering this state
   
   Serial.println("FEED_TO_DISTANCE: Exit state - variables reset");
 }

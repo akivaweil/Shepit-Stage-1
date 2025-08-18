@@ -17,11 +17,11 @@ bool manualMode = false;
 const unsigned long MOTOR_TIMEOUT_MS = 3000; // 3 seconds for sleep mode
 const unsigned long MOTOR_ENABLE_DELAY_MS = 750; // 750ms motor enable delay
 
-// Motor enable delay tracking
+// SIMPLIFIED: Only essential motor enable tracking
 unsigned long motorEnableStartTime = 0;
 bool waitingForMotorEnable = false;
 
-// Emergency stop tracking
+// SIMPLIFIED: Only essential emergency stop tracking
 unsigned long cycleStartTime = 0;
 bool emergencyStopRequested = false;
 const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent accidental stops
@@ -196,35 +196,6 @@ void stopContinuousFeed() {
 }
 
 //* ************************************************************************
-//* *********************** RELOAD MODE FUNCTIONS *************************
-//* ************************************************************************
-// Note: Reload mode is now handled by the dedicated STATE_RELOAD state
-// These functions are kept for backward compatibility but are deprecated
-
-// Global flag to indicate reload mode is active (deprecated - use state machine instead)
-bool reloadModeActive = false;
-
-void startReloadMode() {
-  // Deprecated function - use transitionToState(STATE_RELOAD) instead
-  Serial.println("WARNING: startReloadMode() is deprecated - use 'reload' command instead");
-  if (isSystemIdle()) {
-    transitionToState(STATE_RELOAD);
-  } else {
-    Serial.println("Cannot start reload mode - system busy");
-  }
-}
-
-void stopReloadMode() {
-  // Deprecated function - use transitionToState(STATE_IDLE) instead
-  Serial.println("WARNING: stopReloadMode() is deprecated - use 'stopreload' command instead");
-  if (currentSystemState == STATE_RELOAD) {
-    transitionToState(STATE_IDLE);
-  } else {
-    Serial.println("Not in reload mode");
-  }
-}
-
-//* ************************************************************************
 //* *********************** FEED MOTOR TIMEOUT LOCK FUNCTIONS *********************
 //* ************************************************************************
 
@@ -380,9 +351,7 @@ void initializeStateMachine() {
 
 // External references to state variables that need resetting
 extern CuttingStep currentStep; // From CUTTING state
-extern bool cutMotorStarted;    // From CUTTING state
 extern int32_t cutStartPosition; // From CUTTING state
-extern bool returnMotorStarted;  // From CUTTING state
 extern int32_t returnStartPosition; // From CUTTING state
 
 void resetAllStateMachineFlags() {
@@ -419,12 +388,8 @@ void resetCuttingCycleFlags() {
   // Reset cutting step to beginning
   currentStep = STEP_ACTIVATE_MOTORS;
   
-  // Reset cut motor flags
-  cutMotorStarted = false;
+  // Reset motor position tracking
   cutStartPosition = 0;
-  
-  // Reset return motor flags
-  returnMotorStarted = false;
   returnStartPosition = 0;
   
   Serial.println("Cutting cycle flags reset - ready for new cycle");

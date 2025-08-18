@@ -112,10 +112,6 @@ bool isRunCycleSwitchActive();
 void startContinuousFeed();
 void stopContinuousFeed();
 
-// Reload mode functions
-void startReloadMode();
-void stopReloadMode();
-
 // Reload mode state
 extern bool reloadModeActive;
 

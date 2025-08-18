@@ -25,17 +25,8 @@ static Bounce2::Button cuttingDistanceSensor = Bounce2::Button();
 // Cutting cycle step tracking
 static CuttingStep currentStep = STEP_ACTIVATE_MOTORS;
 
-//! ************************************************************************
-//! CUT CYCLE STATE VARIABLES - RESET AT BEGINNING OF EACH CYCLE
-//! ************************************************************************
-// These variables track the state of each step and must be reset for each new cycle
-
-// Cut motor step tracking variables
-static bool cutMotorStarted = false;
+// SIMPLIFIED: Only essential motor position tracking
 static int32_t cutStartPosition = 0;
-
-// Return motor step tracking variables  
-static bool returnMotorStarted = false;
 static int32_t returnStartPosition = 0;
 
 void enterCuttingState() {
@@ -201,7 +192,7 @@ void updateExtendClampStep() {
 //* ************************************************************************
 void updateCutWoodStep() {
   // Start cut motor forward movement if not already started
-  if (!cutMotorStarted && cutMotor) {
+  if (cutMotor) {
     Serial.println("CUTTING: Step 5 - Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
     
     // Store starting position
@@ -214,11 +205,10 @@ void updateCutWoodStep() {
     
     // Start forward movement
     cutMotor->move(cutMotorSteps);
-    cutMotorStarted = true;
   }
   
   // Check if cutting movement is complete
-  if (cutMotorStarted && cutMotor && !cutMotor->isRunning()) {
+  if (cutMotor && !cutMotor->isRunning()) {
     int32_t currentPosition = cutMotor->getCurrentPosition();
     int32_t expectedPosition = cutStartPosition + cutMotorSteps;
     
@@ -228,9 +218,6 @@ void updateCutWoodStep() {
     // Verify position is close to expected (allow small tolerance)
     if (abs(currentPosition - expectedPosition) <= 10) {
       Serial.println("CUTTING: Position verification successful - moving to return step");
-      
-      // Reset for return movement
-      cutMotorStarted = false;
       
       // Move to next step
       currentStep = STEP_RETURN_CUT_MOTOR;
@@ -248,7 +235,7 @@ void updateCutWoodStep() {
 //* ************************************************************************
 void updateReturnCutMotorStep() {
   // Start cut motor return movement if not already started
-  if (!returnMotorStarted && cutMotor) {
+  if (cutMotor) {
     Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
     
     // Store starting position for return
@@ -261,11 +248,10 @@ void updateReturnCutMotorStep() {
     
     // Start return movement
     cutMotor->move(-cutMotorSteps);
-    returnMotorStarted = true;
   }
   
   // Check if return movement is complete
-  if (returnMotorStarted && cutMotor && !cutMotor->isRunning()) {
+  if (cutMotor && !cutMotor->isRunning()) {
     int32_t currentPosition = cutMotor->getCurrentPosition();
     int32_t expectedPosition = returnStartPosition - cutMotorSteps;
     
@@ -275,9 +261,6 @@ void updateReturnCutMotorStep() {
     // Verify return position is close to expected (allow small tolerance)
     if (abs(currentPosition - expectedPosition) <= 10) {
       Serial.println("CUTTING: Return position verification successful");
-      
-      // Reset for next cycle
-      returnMotorStarted = false;
       
       // Move to next step
       currentStep = STEP_CHECK_CONDITIONS;
