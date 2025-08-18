@@ -22,14 +22,14 @@ static Bounce2::Button idleWoodSensor = Bounce2::Button();
 // Run cycle switch debouncer for cutting cycle control
 static Bounce2::Button runCycleSwitch = Bounce2::Button();
 
-// Right switch debouncer for continuous feed operation
+// Right switch debouncer for reload mode operation
 static Bounce2::Button rightSwitch = Bounce2::Button();
 
 // Red button debouncer for continuous feed operation
 static Bounce2::Button redButton = Bounce2::Button();
 
 // Distance sensor debouncer for feed motor stop control
-static Bounce2::Button distanceSensor = Bounce2::Button();
+static Bounce2::Button idleDistanceSensor = Bounce2::Button();
 
 // Feed motor control state tracking
 static bool feedMotorShouldRun = false;
@@ -40,6 +40,7 @@ static const unsigned long FEED_MOTOR_STATE_CHANGE_DELAY = 100; // 100ms minimum
 // Feed motor timeout tracking for 2-second safety limit
 static unsigned long feedMotorStartTime = 0;
 static bool feedMotorTimeoutOccurred = false;
+static bool feedMotorTimeoutLocked = false; // Prevents restart after timeout until conditions change
 
 // Clamp state tracking to prevent rapid state changes
 static bool clampShouldBeRetracted = false;
@@ -50,23 +51,23 @@ static const unsigned long CLAMP_STATE_CHANGE_DELAY = 200; // 200ms minimum dela
 void enterIdleState() {
   // Initialize wood sensor monitoring
   idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
-  idleWoodSensor.interval(50); // 50ms debounce
+  idleWoodSensor.interval(sensorDebounceTime); // Standard sensor debounce
   
   // Initialize run cycle switch monitoring
   runCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT);
-  runCycleSwitch.interval(50); // 50ms debounce
+  runCycleSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
   // Initialize right switch monitoring
   rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT);
-  rightSwitch.interval(50); // 50ms debounce
+  rightSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
   // Initialize red button monitoring
   redButton.attach(RED_BUTTON_PIN, INPUT);
-  redButton.interval(50); // 50ms debounce
+  redButton.interval(sensorDebounceTime); // Standard sensor debounce
   
   // Initialize distance sensor monitoring for feed motor stop control
-  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
-  distanceSensor.interval(50); // 50ms debounce
+  idleDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
+  idleDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
   // Enable motors when entering idle state
   enableAllMotors();
@@ -111,7 +112,7 @@ void updateIdleState() {
   runCycleSwitch.update();
   rightSwitch.update();
   redButton.update();
-  distanceSensor.update();
+  idleDistanceSensor.update();
   
   //! ************************************************************************
   //! FEED MOTOR CONTROL LOGIC
@@ -233,6 +234,7 @@ void updateIdleState() {
       feedMotorWasRunning = false;
       
       Serial.println("Feed motor stopped due to 2-second timeout - safety limit reached");
+      Serial.println("Feed motor LOCKED - will not restart until conditions change (run cycle OFF/ON or wood removed)");
     }
   }
   
