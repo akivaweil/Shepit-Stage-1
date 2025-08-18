@@ -69,7 +69,7 @@ void enterIdleState() {
   
   // CRITICAL FIX: Ensure feed motor is stopped when entering IDLE state
   if (feedMotor && feedMotor->isRunning()) {
-    Serial.println("IDLE: Stopping feed motor that was running from previous state");
+          // No verbose logging
     feedMotor->forceStop();
     delay(50); // Brief delay to ensure motor stops
   }
@@ -86,19 +86,14 @@ void enterIdleState() {
     Serial.println("System ready");
   }
   
-  Serial.println("Feed motor control: starts when run cycle switch ON + wood present, stops when distance sensor triggered");
-  Serial.println("IDLE: Feed motor control variables reset - ready for clean operation");
+  Serial.println("Feed motor control ready");
+  Serial.println("IDLE: Ready");
 }
 
 void updateIdleState() {
   // Sensors are now updated centrally in updateStateMachine()
   
-  // Debug: Verify sensor updates are working
-  static unsigned long lastSensorDebug = 0;
-  if (millis() - lastSensorDebug >= 5000) { // Log every 5 seconds (reduced)
-    Serial.println("IDLE: Right switch: " + String(isRightSwitchActive() ? "ACTIVE" : "INACTIVE"));
-    lastSensorDebug = millis();
-  }
+  // No periodic sensor status logs
   
   //! ************************************************************************
   //! FEED MOTOR CONTROL LOGIC - SIMPLIFIED AND FIXED
@@ -140,7 +135,7 @@ void updateIdleState() {
     static bool wasLockedWhenSwitchOff = false;
     if (!wasLockedWhenSwitchOff) {
       wasLockedWhenSwitchOff = true;
-      Serial.println("Feed motor timeout lock active - turn run cycle switch OFF then ON to reset");
+      Serial.println("Feed motor: LOCKED");
     }
   } else if (runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is ON and motor was locked - clear the lock to allow restart
@@ -165,9 +160,9 @@ void updateIdleState() {
     feedMotorWasRunning = !feedMotorShouldRun;
     
     if (feedMotorShouldRun) {
-      Serial.println("Feed motor conditions met: run cycle ON + wood present");
+      Serial.println("Feed motor: ON");
     } else {
-      Serial.println("Feed motor conditions not met: stopping motor");
+      Serial.println("Feed motor: OFF");
     }
   }
   
@@ -176,15 +171,15 @@ void updateIdleState() {
   static bool lastRunCycleState = false;
   if (runCycleActive != lastRunCycleState) {
     if (runCycleActive) {
-      Serial.println("Cycle switch: ON - checking feed motor conditions");
+      Serial.println("Cycle switch: ON");
       // CRITICAL FIX: Reset the was-running flag when cycle switch turns ON
       // This forces the motor to start if conditions are met
       feedMotorWasRunning = false;
       // CRITICAL FIX: Also reset the should-run state to force re-evaluation
       feedMotorShouldRun = false;
-      Serial.println("Forcing feed motor state update due to cycle switch ON");
+      // No verbose logging
     } else {
-      Serial.println("Cycle switch: OFF - stopping feed motor");
+      Serial.println("Cycle switch: OFF");
       // Ensure feed motor stops immediately
       if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
@@ -211,13 +206,13 @@ void updateIdleState() {
         // Clamp should be retracted
         if (!isClampRetracted()) {
           retractClamp();
-          Serial.println("Clamp: RETRACTED (feed motor running)");
+          Serial.println("Clamp: RETRACTED");
         }
       } else {
         // Clamp should be extended
         if (isClampRetracted()) {
           extendClamp();
-          Serial.println("Clamp: EXTENDED (feed motor stopped)");
+          Serial.println("Clamp: EXTENDED");
         }
       }
       
@@ -239,7 +234,7 @@ void updateIdleState() {
           // Ensure motors are enabled (wake from sleep mode if needed)
           if (!motorsEnabled) {
             enableAllMotors();
-            Serial.println("Feed motor: motors enabled from sleep mode");
+            // No verbose logging
           }
           
           // Configure and start feed motor
@@ -257,7 +252,7 @@ void updateIdleState() {
           // Reset motor timeout to keep motors enabled
           resetMotorTimeout();
           
-          Serial.println("Feed motor: STARTED (run cycle ON + wood present)");
+          Serial.println("Feed motor: STARTED");
         }
       } else {
         // Feed motor should NOT be running
@@ -269,11 +264,11 @@ void updateIdleState() {
           feedMotorTimeoutOccurred = false;
           
           if (inCuttingCycle) {
-            Serial.println("Feed motor: STOPPED (cutting cycle safety)");
-          } else if (!runCycleActive) {
-            Serial.println("Feed motor: STOPPED (cycle switch OFF)");
-          } else if (!woodPresent) {
-            Serial.println("Feed motor: STOPPED (wood not present)");
+                  Serial.println("Feed motor: STOPPED");
+      } else if (!runCycleActive) {
+        Serial.println("Feed motor: STOPPED");
+      } else if (!woodPresent) {
+        Serial.println("Feed motor: STOPPED");
           }
         }
       }
@@ -293,7 +288,7 @@ void updateIdleState() {
   if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_RELOAD)) {
     // Check if run cycle switch is still active
     if (!runCycleActive) {
-      Serial.println("Feed motor: EMERGENCY STOP (cycle switch OFF)");
+      Serial.println("Feed motor: EMERGENCY STOP");
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
@@ -304,7 +299,7 @@ void updateIdleState() {
     
     // Check if wood is still present
     if (!woodPresent) {
-      Serial.println("Feed motor: EMERGENCY STOP (wood not present)");
+      Serial.println("Feed motor: EMERGENCY STOP");
       feedMotor->forceStop();
       feedMotorWasRunning = false;
       feedMotorTimeoutOccurred = false;
@@ -326,7 +321,7 @@ void updateIdleState() {
     if (elapsedTime >= 2000) {
       feedMotorTimeoutOccurred = true;
       setFeedMotorTimeoutLocked(true); // Lock feed motor from restarting after timeout
-      Serial.println("Feed motor: SAFETY TIMEOUT (2+ seconds) - stopping motor");
+      Serial.println("Feed motor: SAFETY TIMEOUT");
       
       // Stop the feed motor immediately
       feedMotor->forceStop();
@@ -337,7 +332,7 @@ void updateIdleState() {
       // Update tracking variables
       feedMotorWasRunning = false;
       
-      Serial.println("Feed motor: LOCKED - cycle switch OFF then ON to reset");
+      Serial.println("Feed motor: LOCKED");
     }
   }
   
@@ -353,12 +348,11 @@ void updateIdleState() {
       // Reset timeout tracking when motor stops due to distance sensor
       feedMotorTimeoutOccurred = false;
       
-      Serial.println("Feed motor: STOPPED (distance sensor triggered)");
+      Serial.println("Feed motor: STOPPED");
     }
     
     // Start cutting cycle
     Serial.println("*** STARTING CUTTING CYCLE ***");
-    Serial.println("Conditions: Run cycle ON, Wood present, Distance sensor triggered");
     transitionToState(STATE_CUTTING);
     return; // Exit early since we're transitioning to cutting state
   }
@@ -386,12 +380,7 @@ void updateIdleState() {
   bool reloadSwitchActive = isRightSwitchActive();
   static bool reloadSwitchWasActive = false;
   
-  // Debug logging for reload switch monitoring
-  static unsigned long lastReloadSwitchDebug = 0;
-  if (millis() - lastReloadSwitchDebug >= 3000) { // Log every 3 seconds (reduced)
-    Serial.println("IDLE: Reload switch: " + String(reloadSwitchActive ? "ACTIVE" : "INACTIVE"));
-    lastReloadSwitchDebug = millis();
-  }
+  // No periodic reload switch monitoring logs
   
   // Detect rising edge of reload switch (switch turned ON)
   if (reloadSwitchActive && !reloadSwitchWasActive) {
@@ -400,13 +389,13 @@ void updateIdleState() {
     // Stop feed motor if it's running before transitioning to reload
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
-      Serial.println("Feed motor: STOPPED (transitioning to reload mode)");
+      Serial.println("Feed motor: STOPPED");
     }
     
     // Extend clamp to secure wood before reload operation
     if (!isClampRetracted()) {
       extendClamp();
-      Serial.println("Clamp: EXTENDED (securing wood for reload operation)");
+      Serial.println("Clamp: EXTENDED");
     }
     
     // Transition to reload state
@@ -444,9 +433,9 @@ void resetIdleFeedMotorControl() {
   
   // Ensure feed motor is stopped
   if (feedMotor && feedMotor->isRunning()) {
-    Serial.println("IDLE: Stopping feed motor during reset");
+    // No verbose logging
     feedMotor->forceStop();
   }
   
-  Serial.println("IDLE: Feed motor control variables reset complete");
+  // No verbose logging
 } 

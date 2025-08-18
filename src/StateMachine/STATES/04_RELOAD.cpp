@@ -100,12 +100,7 @@ void updateReloadState() {
   // Check if right switch is turned off during operation - return to idle immediately
   bool rightSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
   
-  // Debug logging for switch state monitoring
-  static bool lastRightSwitchState = false;
-  if (rightSwitchActive != lastRightSwitchState) {
-    Serial.println("Reload switch: " + String(rightSwitchActive ? "ACTIVE" : "INACTIVE"));
-    lastRightSwitchState = rightSwitchActive;
-  }
+  // No periodic switch state monitoring logs
   
   if (!rightSwitchActive) {
     Serial.println("RELOAD: Right switch turned OFF - stopping operation");
@@ -146,12 +141,7 @@ void updateReloadState() {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - reloadStartTime;
     
-    // Check for timeout every 1000ms for step movement
-    if (elapsedTime % 1000 == 0) {
-      // Debug timeout progress
-      // Reduced periodic timeout log
-      Serial.println("RELOAD: Timeout " + String(elapsedTime) + "/" + String(RELOAD_TIMEOUT_MS) + "ms");
-    }
+    // No periodic timeout progress logs
     
     if (elapsedTime >= RELOAD_TIMEOUT_MS) {
       Serial.println("RELOAD: TIMEOUT DETECTED at " + String(elapsedTime) + "ms");
@@ -187,34 +177,7 @@ void updateReloadState() {
     }
   }
   
-  //! ************************************************************************
-  //! DEBUG LOGGING FOR TIMEOUT MONITORING
-  //! ************************************************************************
-  // Debug logging for timeout troubleshooting
-  if (reloadMotorMoving) {
-    unsigned long elapsedTime = millis() - reloadStartTime;
-    static unsigned long lastDebugTime = 0;
-    
-    // Log every 1000ms for better debugging
-    if (elapsedTime - lastDebugTime >= 1000) {
-      // Reduced periodic runtime log
-      Serial.println("RELOAD: Running " + String(elapsedTime) + "/" + String(RELOAD_TIMEOUT_MS) + "ms");
-      if (feedMotor) {
-        // Additional motor state verification
-        if (!feedMotor->isRunning()) {
-          Serial.println("RELOAD: WARNING - Motor stopped unexpectedly at " + String(elapsedTime) + "ms");
-          reloadMotorMoving = false; // Update flag to match actual state
-        }
-      }
-      lastDebugTime = elapsedTime;
-    }
-    
-    // Additional debug info when approaching timeout
-    if (elapsedTime >= 4000 && elapsedTime < RELOAD_TIMEOUT_MS) {
-      // Keep concise
-      Serial.println("RELOAD: Approaching timeout");
-    }
-  }
+  // No periodic debug logging for timeout monitoring
   
   //! ************************************************************************
   //! MOVEMENT COMPLETION DETECTION
@@ -223,13 +186,13 @@ void updateReloadState() {
   if (reloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
     reloadMotorMoving = false;
     
-    Serial.println("RELOAD: Movement complete - " + String(RELOAD_STEPS) + " steps completed");
+    Serial.println("RELOAD: Movement complete");
     
     // Extend clamp to secure wood in new position
     extendClamp();
     
     // Return to idle state after successful completion
-    Serial.println("RELOAD: Reload operation successful - returning to IDLE state");
+    Serial.println("RELOAD: Operation successful");
     transitionToState(STATE_IDLE);
     return;
   }
@@ -244,7 +207,7 @@ void updateReloadState() {
 
 void exitReloadState() {
   // Clean up state variables
-  Serial.println("RELOAD: Exiting state - cleaning up variables");
+  // No exit logging
   
   reloadMotorMoving = false;
 }
