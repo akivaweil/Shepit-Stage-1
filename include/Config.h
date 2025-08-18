@@ -28,4 +28,12 @@ extern const float cutMotorReturnAcceleration;
 
 extern const unsigned long buttonDebounceTime;
 
+//* ************************************************************************
+//* *********************** SENSOR DEBOUNCE CONFIGURATION ******************
+//* ************************************************************************
+
+// Sensor debounce intervals in milliseconds
+extern const unsigned long sensorDebounceTime;        // Standard sensor debounce (wood, switches, buttons)
+extern const unsigned long distanceSensorDebounceTime; // Distance sensor specific debounce
+
 #endif 

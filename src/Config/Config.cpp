@@ -27,4 +27,12 @@ const float cutMotorReturnAcceleration = 50000.0; // Steps per second^2
 //* ************************************************************************
 
 // Button debounce time in milliseconds
-const unsigned long buttonDebounceTime = 20; 
+const unsigned long buttonDebounceTime = 20;
+
+//* ************************************************************************
+//* *********************** SENSOR DEBOUNCE CONFIGURATION ******************
+//* ************************************************************************
+
+// Sensor debounce intervals in milliseconds
+const unsigned long sensorDebounceTime = 50;           // Standard sensor debounce (wood, switches, buttons)
+const unsigned long distanceSensorDebounceTime = 50;   // Distance sensor specific debounce 
