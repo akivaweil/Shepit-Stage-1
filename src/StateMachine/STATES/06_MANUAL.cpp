@@ -18,6 +18,10 @@ void enterManualState() {
     resetFeedMotorTimeoutLock();
   }
   
+  // CRITICAL FIX: Reset feed motor control variables to ensure clean start
+  // This prevents issues with feed motor control from previous states
+  resetFeedMotorControlVariables();
+  
   // Motors are permanently enabled - no need to enable them
   
   // Set manual mode flag for serial command processing only

@@ -34,7 +34,7 @@ static Bounce2::Button redButton = Bounce2::Button();
 // Distance sensor debouncer for feed motor stop control
 static Bounce2::Button idleDistanceSensor = Bounce2::Button();
 
-// Feed motor control state tracking
+// Feed motor control state tracking - SIMPLIFIED
 static bool feedMotorShouldRun = false;
 static bool feedMotorWasRunning = false;
 static unsigned long lastFeedMotorStateChange = 0;
@@ -85,7 +85,7 @@ void enterIdleState() {
   // Reset manual mode flag
   manualMode = false;
   
-  // Reset feed motor control state
+  // CRITICAL FIX: Reset feed motor control state - ensure clean start
   feedMotorShouldRun = false;
   feedMotorWasRunning = false;
   lastFeedMotorStateChange = 0;
@@ -97,6 +97,13 @@ void enterIdleState() {
   clampShouldBeRetracted = false;
   clampWasRetracted = false;
   lastClampStateChange = 0;
+  
+  // CRITICAL FIX: Ensure feed motor is stopped when entering IDLE state
+  if (feedMotor && feedMotor->isRunning()) {
+    Serial.println("IDLE: Stopping feed motor that was running from previous state");
+    feedMotor->forceStop();
+    delay(50); // Brief delay to ensure motor stops
+  }
   
   // Check if this was an emergency stop before resetting the flag
   bool wasEmergencyStop = emergencyStopRequested;
@@ -111,6 +118,7 @@ void enterIdleState() {
   }
   
   Serial.println("Feed motor control: starts when run cycle switch ON + wood present, stops when distance sensor triggered");
+  Serial.println("IDLE: Feed motor control variables reset - ready for clean operation");
 }
 
 void updateIdleState() {
@@ -122,7 +130,7 @@ void updateIdleState() {
   idleDistanceSensor.update();
   
   //! ************************************************************************
-  //! FEED MOTOR CONTROL LOGIC
+  //! FEED MOTOR CONTROL LOGIC - SIMPLIFIED AND FIXED
   //! ************************************************************************
   // Simplified logic: Feed motor runs continuously when conditions are met
   // Distance sensor triggers cutting cycle when activated
@@ -137,16 +145,13 @@ void updateIdleState() {
   // BUT NOT during cutting cycles (safety requirement)
   // AND NOT when locked due to timeout (prevents restart after timeout)
   // AND NOT when in reload state (prevents interference with reload operations)
-  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
+  bool newFeedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
   
-  // Unlock feed motor if conditions change (prevents infinite timeout loop)
+  // CRITICAL FIX: Reset feed motor timeout lock when conditions change
   static bool previousRunCycleActive = false;
   static bool previousWoodPresent = false;
   
-  // Unlock feed motor when:
-  // 1. Conditions change (wood presence or run cycle switch)
-  // 2. Run cycle switch is turned OFF (allows user to cancel and reset)
-  // 3. Run cycle switch is turned ON after being OFF (allows user to restart)
+  // Unlock feed motor when conditions change
   if (runCycleActive != previousRunCycleActive || woodPresent != previousWoodPresent) {
     if (isFeedMotorTimeoutLocked()) {
       resetFeedMotorTimeoutLock();
@@ -157,7 +162,7 @@ void updateIdleState() {
     previousWoodPresent = woodPresent;
   }
   
-  // Additional unlock logic: Allow user to reset timeout lock by cycling run cycle switch
+  // CRITICAL FIX: Allow user to reset timeout lock by cycling run cycle switch
   if (!runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is OFF and motor is locked - this allows user to cancel
     // The lock will be cleared when they turn the switch back ON
@@ -179,6 +184,43 @@ void updateIdleState() {
     // Reset the tracking variable when switch is ON and not locked
     static bool wasLockedWhenSwitchOff = false;
     wasLockedWhenSwitchOff = false;
+  }
+  
+  // CRITICAL FIX: Update feed motor should-run state and handle state changes
+  if (newFeedMotorShouldRun != feedMotorShouldRun) {
+    feedMotorShouldRun = newFeedMotorShouldRun;
+    
+    // Reset the was-running flag when conditions change to force state update
+    feedMotorWasRunning = !feedMotorShouldRun;
+    
+    if (feedMotorShouldRun) {
+      Serial.println("Feed motor conditions met: run cycle ON + wood present");
+    } else {
+      Serial.println("Feed motor conditions not met: stopping motor");
+    }
+  }
+  
+  // CRITICAL FIX: Additional check for cycle switch state changes
+  // This ensures that when the cycle switch is toggled, the feed motor responds immediately
+  static bool lastRunCycleState = false;
+  if (runCycleActive != lastRunCycleState) {
+    if (runCycleActive) {
+      Serial.println("Cycle switch turned ON - checking feed motor conditions");
+      // Force a re-evaluation of feed motor state
+      if (feedMotorShouldRun && !feedMotorWasRunning) {
+        feedMotorWasRunning = false; // Force the motor to start
+        Serial.println("Forcing feed motor state update due to cycle switch ON");
+      }
+    } else {
+      Serial.println("Cycle switch turned OFF - stopping feed motor");
+      // Ensure feed motor stops immediately
+      if (feedMotor && feedMotor->isRunning()) {
+        feedMotor->forceStop();
+        feedMotorWasRunning = false;
+        feedMotorTimeoutOccurred = false;
+      }
+    }
+    lastRunCycleState = runCycleActive;
   }
   
   // Determine if clamp should be retracted (retracted when feed motor is running)
@@ -398,4 +440,30 @@ void updateIdleState() {
 void exitIdleState() {
   // Nothing specific needed when exiting idle state
   // Motor enable/disable is handled by the target state
+}
+
+// Function to reset feed motor control variables (can be called externally)
+void resetIdleFeedMotorControl() {
+  Serial.println("IDLE: Resetting feed motor control variables");
+  
+  // Reset feed motor control state
+  feedMotorShouldRun = false;
+  feedMotorWasRunning = false;
+  lastFeedMotorStateChange = 0;
+  
+  // Reset feed motor timeout tracking
+  feedMotorTimeoutOccurred = false;
+  
+  // Reset clamp control state
+  clampShouldBeRetracted = false;
+  clampWasRetracted = false;
+  lastClampStateChange = 0;
+  
+  // Ensure feed motor is stopped
+  if (feedMotor && feedMotor->isRunning()) {
+    Serial.println("IDLE: Stopping feed motor during reset");
+    feedMotor->forceStop();
+  }
+  
+  Serial.println("IDLE: Feed motor control variables reset complete");
 } 

@@ -46,6 +46,10 @@ void enterCuttingState() {
     resetFeedMotorTimeoutLock();
   }
   
+  // CRITICAL FIX: Reset feed motor control variables to ensure clean start
+  // This prevents issues with feed motor control from previous states
+  resetFeedMotorControlVariables();
+  
   // Check only wood presence at the beginning
   if (!isWoodPresent()) {
     Serial.println("CUTTING: NO WOOD DETECTED - Canceling cutting cycle");
@@ -314,6 +318,10 @@ void updateCheckConditionsStep() {
     
     // Reset all cutting cycle flags before transitioning
     resetCuttingCycleFlags();
+    
+    // CRITICAL FIX: Reset feed motor control variables to ensure clean state
+    // This prevents issues with feed motor not responding to cycle switch after cutting
+    resetFeedMotorControlVariables();
     
     Serial.println("CUTTING: Automatically transitioning to RELOAD state to clear cutting area");
     transitionToState(STATE_RELOAD);

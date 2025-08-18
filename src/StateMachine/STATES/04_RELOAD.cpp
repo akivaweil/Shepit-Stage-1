@@ -37,6 +37,10 @@ void enterReloadState() {
     resetFeedMotorTimeoutLock();
   }
   
+  // CRITICAL FIX: Reset feed motor control variables to ensure clean start
+  // This prevents issues with feed motor control from previous states
+  resetFeedMotorControlVariables();
+  
   // Reset all sequence variables
   reloadStartTime = 0;
   reloadMotorMoving = false;

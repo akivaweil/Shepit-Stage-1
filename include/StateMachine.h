@@ -91,6 +91,9 @@ void resetCuttingCycleFlags();
 void resetFeedMotorFlags();
 void resetMotorMovementFlags();
 
+// Function to reset feed motor control variables (IDLE state specific)
+void resetFeedMotorControlVariables();
+
 // Pneumatic clamp control functions
 void extendClamp();
 void retractClamp();
@@ -120,6 +123,9 @@ extern bool reloadModeActive;
 void enterIdleState();
 void updateIdleState();
 void exitIdleState();
+
+// Function to reset feed motor control variables in IDLE state
+void resetIdleFeedMotorControl();
 
 void enterFeedToDistanceState();
 void updateFeedToDistanceState();

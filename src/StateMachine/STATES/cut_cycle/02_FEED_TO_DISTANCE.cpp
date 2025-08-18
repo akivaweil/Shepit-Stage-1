@@ -48,6 +48,10 @@ void enterFeedToDistanceState() {
   woodPresenceSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
   woodPresenceSensor.interval(distanceSensorDebounceTime); // Use same debounce time
   
+  // CRITICAL FIX: Reset feed motor control variables to ensure clean start
+  // This prevents issues with feed motor control from previous states
+  resetFeedMotorControlVariables();
+  
   // Reset all sequence variables
   feedStartTime = 0;
   feedMotorMoving = false;
