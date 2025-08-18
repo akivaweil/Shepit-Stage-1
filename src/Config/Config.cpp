@@ -4,32 +4,27 @@
 //* ************************************************************************
 //* *********************** MOTOR CONFIGURATION ****************************
 //* ************************************************************************
+
 // Feed motor parameters
-const float feedMotorSpeed = 2000.0;            // Steps per second (reduced for better distance sensor detection)
-const float feedMotorAcceleration = 20000.0;   // Steps per second^2 (increased for smoother acceleration)
-const float feedMotorSteps = 0.0;              // Steps per move (set to 0 to disable feeding sequence)
-
-// Feed motor pullback parameters
-const float FM_preCutPullback = 50.0;         // Steps to pull back before cut motor moves
-const float FM_returnPullback = 50.0;         // Steps to pull back during return (after cutting)
-
-// Reloading sequence timing
-const unsigned long woodDetectionToFeedDelay = 10; // Milliseconds to wait after wood detection before feed motor moves
+const float feedMotorSpeed = 2000.0;            // Steps per second
+const float feedMotorAcceleration = 20000.0;   // Steps per second^2
+const float feedMotorSteps = 1000.0;           // Steps per move (for manual commands)
 
 // Wood distance sensor delay
-const unsigned long woodDistanceDelay = 10; // Milliseconds to wait after distance sensor triggered before cutting cycle
+const unsigned long woodDistanceDelay = 10;     // Milliseconds to wait after distance sensor triggered before cutting
 
 // Cut motor parameters
-const float cutMotorSpeed = 1500.0;            // Steps per second (reduced for smoother operation)
-const float cutMotorAcceleration = 10000.0;    // Steps per second^2 (increased for smooth acceleration)
+const float cutMotorSpeed = 1500.0;            // Steps per second
+const float cutMotorAcceleration = 10000.0;    // Steps per second^2
 const float cutMotorSteps = 3000.0;            // Steps per move
 
-// Cut motor return parameters (for cutting cycle return movement)
+// Cut motor return parameters
 const float cutMotorReturnSpeed = 25000.0;      // Steps per second 
 const float cutMotorReturnAcceleration = 50000.0; // Steps per second^2
 
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************
 //* ************************************************************************
+
 // Button debounce time in milliseconds
 const unsigned long buttonDebounceTime = 20; 
