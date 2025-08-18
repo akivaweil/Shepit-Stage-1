@@ -302,6 +302,7 @@ void updateFeedToDistanceState() {
     // Check both conditions before starting cutting cycle
     if (isRunCycleSwitchActive() && isWoodPresent()) {
       Serial.println("Conditions met - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED - Starting cutting cycle");
+      Serial.println("FEED_TO_DISTANCE: Transitioning directly to CUTTING state (includes complete cutting cycle)");
       transitionToState(STATE_CUTTING);
     } else {
       if (!isRunCycleSwitchActive()) {

@@ -24,7 +24,7 @@ extern const float cutMotorSpeed;
 extern const float cutMotorAcceleration;
 extern const float cutMotorSteps;
 
-// Cut motor return parameters (for RETURNING state)
+// Cut motor return parameters (for cutting cycle return movement)
 extern const float cutMotorReturnSpeed;
 extern const float cutMotorReturnAcceleration;
 

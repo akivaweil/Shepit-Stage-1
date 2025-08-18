@@ -13,14 +13,7 @@ enum SystemState {
   STATE_IDLE = 0,
   STATE_FEED_TO_DISTANCE = 1,
   STATE_CUTTING = 2,
-  STATE_RETURNING = 3,
-  STATE_MANUAL = 4
-};
-
-// Cutting phase enumeration (no longer used - kept for compatibility)
-enum CuttingPhase {
-  CUT_FORWARD_PHASE,
-  CUT_BACKWARD_PHASE
+  STATE_MANUAL = 3
 };
 
 //* ************************************************************************
@@ -37,9 +30,6 @@ extern const unsigned long MOTOR_ENABLE_DELAY_MS;
 // Motor enable delay tracking
 extern unsigned long motorEnableStartTime;
 extern bool waitingForMotorEnable;
-
-// Cutting state tracking
-extern CuttingPhase currentCuttingPhase;
 
 // Emergency stop tracking
 extern unsigned long cycleStartTime;
@@ -109,13 +99,14 @@ void enterCuttingState();
 void updateCuttingState();
 void exitCuttingState();
 
-// Cutting state phase functions
-void updatePositioningPhase();
-void updateCuttingPhase();
-
-void enterReturningState();
-void updateReturningState();
-void exitReturningState();
+// Cutting cycle step functions
+void updateActivateMotorsStep();
+void updateRetractClampStep();
+void updateFeedForwardStep();
+void updateExtendClampStep();
+void updateCutWoodStep();
+void updateReturnCutMotorStep();
+void updateCheckConditionsStep();
 
 void enterManualState();
 void updateManualState();

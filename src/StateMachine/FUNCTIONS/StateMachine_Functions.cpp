@@ -21,9 +21,6 @@ const unsigned long MOTOR_ENABLE_DELAY_MS = 750; // 750ms motor enable delay
 unsigned long motorEnableStartTime = 0;
 bool waitingForMotorEnable = false;
 
-// Cutting state tracking
-CuttingPhase currentCuttingPhase = CUT_FORWARD_PHASE;
-
 // Emergency stop tracking
 unsigned long cycleStartTime = 0;
 bool emergencyStopRequested = false;
@@ -202,7 +199,6 @@ String getCurrentStateName() {
     case STATE_IDLE: return "IDLE";
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
-    case STATE_RETURNING: return "RETURNING";
     case STATE_MANUAL: return "MANUAL";
     default: return "UNKNOWN";
   }
@@ -214,19 +210,17 @@ bool isSystemIdle() {
 
 bool isSystemBusy() {
   return (currentSystemState == STATE_FEED_TO_DISTANCE ||
-          currentSystemState == STATE_CUTTING || 
-          currentSystemState == STATE_RETURNING);
+          currentSystemState == STATE_CUTTING);
 }
 
 //* ************************************************************************
 //* *********************** CUTTING CYCLE CHECK ***************************
 //* ************************************************************************
-// Check if system is currently in a cutting cycle (cutting or returning states)
+// Check if system is currently in a cutting cycle (cutting state only)
 // This prevents feed motor from running during cutting operations
 
 bool isInCuttingCycle() {
-  return (currentSystemState == STATE_CUTTING || 
-          currentSystemState == STATE_RETURNING);
+  return (currentSystemState == STATE_CUTTING);
 }
 
 void handleEmergencyStop() {
@@ -249,7 +243,6 @@ void transitionToState(SystemState newState) {
                    (newState == STATE_IDLE ? "IDLE" : 
                     newState == STATE_FEED_TO_DISTANCE ? "FEED_TO_DISTANCE" :
                     newState == STATE_CUTTING ? "CUTTING" : 
-                    newState == STATE_RETURNING ? "RETURNING" :
                     newState == STATE_MANUAL ? "MANUAL" : "UNKNOWN")));
     
     // Exit current state
@@ -257,7 +250,6 @@ void transitionToState(SystemState newState) {
       case STATE_IDLE: exitIdleState(); break;
       case STATE_FEED_TO_DISTANCE: exitFeedToDistanceState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
-      case STATE_RETURNING: exitReturningState(); break;
       case STATE_MANUAL: exitManualState(); break;
     }
     
@@ -269,7 +261,6 @@ void transitionToState(SystemState newState) {
       case STATE_IDLE: enterIdleState(); break;
       case STATE_FEED_TO_DISTANCE: enterFeedToDistanceState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
-      case STATE_RETURNING: enterReturningState(); break;
       case STATE_MANUAL: enterManualState(); break;
     }
   }
@@ -281,7 +272,6 @@ void updateStateMachine() {
     case STATE_IDLE: updateIdleState(); break;
     case STATE_FEED_TO_DISTANCE: updateFeedToDistanceState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
-    case STATE_RETURNING: updateReturningState(); break;
     case STATE_MANUAL: updateManualState(); break;
   }
 }
