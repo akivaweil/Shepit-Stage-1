@@ -128,7 +128,23 @@ void updateIdleState() {
   
   // Feed motor runs when run cycle switch is ON and wood is present
   // BUT NOT during cutting cycles (safety requirement)
-  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle;
+  // AND NOT when locked due to timeout (prevents restart after timeout)
+  // AND NOT when reload mode is active (prevents interference with reload operations)
+  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !feedMotorTimeoutLocked && !reloadModeActive;
+  
+  // Unlock feed motor if conditions change (prevents infinite timeout loop)
+  static bool previousRunCycleActive = false;
+  static bool previousWoodPresent = false;
+  
+  if (runCycleActive != previousRunCycleActive || woodPresent != previousWoodPresent) {
+    if (feedMotorTimeoutLocked) {
+      feedMotorTimeoutLocked = false;
+      feedMotorTimeoutOccurred = false;
+      Serial.println("Feed motor UNLOCKED - conditions changed, timeout reset");
+    }
+    previousRunCycleActive = runCycleActive;
+    previousWoodPresent = woodPresent;
+  }
   
   // Determine if clamp should be retracted (retracted when feed motor is running)
   clampShouldBeRetracted = feedMotorShouldRun;
@@ -180,8 +196,11 @@ void updateIdleState() {
           feedMotor->runForward();
           
           // Start 2-second timeout tracking for feed motor safety
-          feedMotorStartTime = millis();
-          feedMotorTimeoutOccurred = false;
+          // BUT NOT when reload mode is active (reload mode has its own control logic)
+          if (!reloadModeActive) {
+            feedMotorStartTime = millis();
+            feedMotorTimeoutOccurred = false;
+          }
           
           // Reset motor timeout to keep motors enabled
           resetMotorTimeout();
@@ -216,12 +235,14 @@ void updateIdleState() {
   //! FEED MOTOR TIMEOUT CHECK (2-SECOND SAFETY LIMIT)
   //! ************************************************************************
   // Check if feed motor has been running for more than 2 seconds without distance sensor trigger
-  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred) {
+  // BUT NOT when reload mode is active (reload mode has its own control logic)
+  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && !reloadModeActive) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedMotorStartTime;
     
     if (elapsedTime >= 2000) {
       feedMotorTimeoutOccurred = true;
+      feedMotorTimeoutLocked = true; // Lock feed motor from restarting after timeout
       Serial.println("FEED MOTOR TIMEOUT - Motor running for 2+ seconds, stopping for safety");
       
       // Stop the feed motor immediately
@@ -291,14 +312,15 @@ void updateIdleState() {
   
   // Check for right switch activation (active HIGH - switch reads 1 when triggered)
   if (rightSwitch.rose()) {
-    Serial.println("RIGHT SWITCH TRIGGERED - Starting continuous feed forward");
-    startContinuousFeed();
+    Serial.println("RIGHT SWITCH TRIGGERED - Starting RELOAD MODE");
+    Serial.println("RELOAD MODE: Cut motor activated, clamp retracted, feed motor reversing");
+    startReloadMode();
   }
   
   // Check for right switch deactivation (switch released)
   if (rightSwitch.fell()) {
-    Serial.println("RIGHT SWITCH RELEASED - Stopping continuous feed");
-    stopContinuousFeed();
+    Serial.println("RIGHT SWITCH RELEASED - Stopping RELOAD MODE");
+    stopReloadMode();
   }
   
   // Check for red button activation (active HIGH - button reads 1 when pressed)

@@ -191,6 +191,59 @@ void stopContinuousFeed() {
 }
 
 //* ************************************************************************
+//* *********************** RELOAD MODE FUNCTIONS *************************
+//* ************************************************************************
+
+// Global flag to indicate reload mode is active
+bool reloadModeActive = false;
+
+void startReloadMode() {
+  if (feedMotor && cutMotor) {
+    // Set reload mode flag to prevent idle state from interfering
+    reloadModeActive = true;
+    
+    // Explicitly enable motors if they're disabled (wake from sleep mode)
+    if (!motorsEnabled) {
+      enableAllMotors();
+      Serial.println("Motors enabled for reload mode operation");
+    }
+    
+    // Keep cut motor ENABLED but NOT MOVING (just powered and ready)
+    // cutMotor is already enabled via enableAllMotors() - no movement commands
+    
+    // Retract clamp to allow wood movement
+    retractClamp();
+    
+    // Start feed motor in reverse (backward) for reloading
+    feedMotor->setSpeedInHz(feedMotorSpeed);
+    feedMotor->runBackward();
+    
+    // Reset motor timeout to keep motors enabled
+    resetMotorTimeout();
+    
+    Serial.println("RELOAD MODE ACTIVATED - Cut motor ENABLED (not moving), clamp retracted, feed motor reversing");
+  }
+}
+
+void stopReloadMode() {
+  if (feedMotor && cutMotor) {
+    // Clear reload mode flag
+    reloadModeActive = false;
+    
+    // Stop the feed motor
+    feedMotor->forceStop();
+    
+    // Cut motor stays enabled (no need to stop what wasn't moving)
+    // Motors remain enabled for next operation
+    
+    // Extend clamp to secure wood
+    extendClamp();
+    
+    Serial.println("RELOAD MODE DEACTIVATED - Feed motor stopped, cut motor remains enabled, clamp extended to secure wood");
+  }
+}
+
+//* ************************************************************************
 //* *********************** STATE MACHINE FUNCTIONS **********************
 //* ************************************************************************
 
