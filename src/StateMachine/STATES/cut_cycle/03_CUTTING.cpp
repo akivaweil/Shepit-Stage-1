@@ -13,7 +13,8 @@
 //
 // This state is focused solely on cutting operations - no positioning or clamp management
 // Each step waits for motor movement completion before proceeding to the next
-// Automatic cycle restart if conditions are met (wood present + run cycle switch active)
+// Automatic cycle restart if conditions are met (wood present only - run cycle switch ignored)
+// Note: Run cycle switch state is ignored during cutting to prevent interruption of critical operations
 
 // Cutting step enumeration for the 3-step process (unique to this state)
 enum CuttingStateStep {
@@ -34,18 +35,15 @@ static unsigned long returnMotorStartTime = 0;
 // Motor position tracking for return movement
 static float cutMotorStartPosition = 0.0;
 
-// Wood presence and run cycle switch monitoring (unique names to avoid conflicts)
+// Wood presence monitoring (unique names to avoid conflicts)
 static Bounce2::Button cuttingWoodPresenceSensor = Bounce2::Button();
-static Bounce2::Button cuttingRunCycleSwitch = Bounce2::Button();
 
 void enterCuttingState() {
   // Initialize wood presence sensor monitoring
   cuttingWoodPresenceSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
   cuttingWoodPresenceSensor.interval(sensorDebounceTime);
   
-  // Initialize run cycle switch monitoring
-  cuttingRunCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT);
-  cuttingRunCycleSwitch.interval(sensorDebounceTime);
+
   
   // Ensure motors are enabled for cutting operation
   enableAllMotors();
@@ -70,17 +68,10 @@ void enterCuttingState() {
 void updateCuttingState() {
   // Update sensor debouncers
   cuttingWoodPresenceSensor.update();
-  cuttingRunCycleSwitch.update();
   
-  // Check for emergency stop conditions
-  if (!isRunCycleSwitchActive()) {
-    Serial.println("CUTTING: RUN CYCLE SWITCH DEACTIVATED - Emergency stop");
-    if (cutMotor && cutMotor->isRunning()) {
-      cutMotor->forceStop();
-    }
-    transitionToState(STATE_IDLE);
-    return;
-  }
+  // Note: Run cycle switch state is ignored during cutting operation
+  // Cutting operation will complete regardless of switch state
+  // This prevents interruption of critical cutting operations
   
   // Execute current cutting step
   switch (currentCuttingStep) {
@@ -193,14 +184,14 @@ void updateReturnCutMotorStep() {
 //* ************************************************************************
 void updateCheckConditionsStep() {
   // Check if conditions are met for automatic cycle restart
+  // Note: Only wood presence matters - run cycle switch state is ignored during cutting
   bool woodStillPresent = cuttingWoodPresenceSensor.read();
-  bool runCycleStillActive = cuttingRunCycleSwitch.read();
   
-  if (woodStillPresent && runCycleStillActive) {
+  if (woodStillPresent) {
     // Conditions met: automatically restart cutting cycle
     Serial.println("CUTTING: Step 3 - Conditions met - restarting cutting cycle");
     Serial.println("CUTTING: Wood present: " + String(woodStillPresent ? "YES" : "NO"));
-    Serial.println("CUTTING: Run cycle switch: " + String(runCycleStillActive ? "ACTIVE" : "INACTIVE"));
+    Serial.println("CUTTING: Run cycle switch state ignored during cutting operation");
     
     // Reset to Step 1 for next cutting cycle
     currentCuttingStep = CUTTING_STEP_CUT_WOOD;
@@ -217,7 +208,7 @@ void updateCheckConditionsStep() {
     // Conditions not met: transition to RELOAD state
     Serial.println("CUTTING: Step 3 - Conditions not met - transitioning to RELOAD state");
     Serial.println("CUTTING: Wood present: " + String(woodStillPresent ? "YES" : "NO"));
-    Serial.println("CUTTING: Run cycle switch: " + String(runCycleStillActive ? "ACTIVE" : "INACTIVE"));
+    Serial.println("CUTTING: No wood present - cutting cycle complete");
     
     transitionToState(STATE_RELOAD);
   }

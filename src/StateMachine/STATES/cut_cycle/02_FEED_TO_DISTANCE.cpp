@@ -30,7 +30,6 @@ static bool distanceSensorTriggered = false;
 static unsigned long delayStartTime = 0;
 static bool delayComplete = false;
 static bool timeoutOccurred = false;
-static unsigned long lastTimeoutCheck = 0;
 
 // SIMPLIFIED: Remove unnecessary wood detection tracking
 // The system already knows wood is present when entering this state
@@ -55,7 +54,6 @@ void enterFeedToDistanceState() {
   delayStartTime = 0;
   delayComplete = false;
   timeoutOccurred = false;
-  lastTimeoutCheck = 0;
   
   // Check if run cycle switch is still active before proceeding
   if (!isRunCycleSwitchActive()) {
@@ -64,12 +62,16 @@ void enterFeedToDistanceState() {
     return;
   }
   
-  // Reset feed motor timeout lock when entering this state
-  // This ensures the lock is cleared regardless of which state we came from
+  // CRITICAL FIX: Reset feed motor timeout lock AND local timeout variables when entering this state
+  // This ensures both the global lock and local timeout flags are cleared
   if (isFeedMotorTimeoutLocked()) {
     Serial.println("FEED_TO_DISTANCE: Resetting feed motor timeout lock from previous state");
     resetFeedMotorTimeoutLock();
   }
+  
+  // CRITICAL FIX: Also reset all feed motor control variables to ensure clean state
+  // This clears the local feedMotorTimeoutOccurred variable in the IDLE state
+  resetFeedMotorControlVariables();
   
   // Ensure motors are enabled
   enableAllMotors();
@@ -107,7 +109,6 @@ void enterFeedToDistanceState() {
     feedMotor->runForward(); // Continuous forward movement
     feedMotorMoving = true;
     feedStartTime = millis();
-    lastTimeoutCheck = millis(); // Initialize timeout check time
     Serial.println("Feed motor started - moving forward until distance sensor triggered");
     
     // Verify motor is actually running
@@ -174,31 +175,16 @@ void updateFeedToDistanceState() {
   }
   
   //! ************************************************************************
-  //! TIMEOUT DETECTION AND HANDLING (2 SECOND LIMIT)
+  //! SIMPLIFIED TIMEOUT DETECTION (2 SECOND LIMIT)
   //! ************************************************************************
   // Check for feed motor timeout (2 seconds) - if motor runs too long without sensor trigger, go to idle
-  // Note: Since we now stop immediately when wood is lost, we use a standard 2-second timeout
   if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
-    unsigned long currentTime = millis();
-    unsigned long elapsedTime = currentTime - feedStartTime;
+    unsigned long elapsedTime = millis() - feedStartTime;
     
-    // Use standard 2-second timeout since wood loss now stops motor immediately
-    unsigned long timeoutDuration = 2000; // 2 seconds standard timeout
-    
-    // Check for timeout every 100ms to ensure reliable detection
-    if (currentTime - lastTimeoutCheck >= 100) {
-      lastTimeoutCheck = currentTime;
-      
-      // Debug timeout progress
-      if (elapsedTime % 500 == 0) { // Log every 500ms
-        Serial.println("FEED_TO_DISTANCE: Timeout progress - " + String(elapsedTime) + "ms elapsed, " + String(timeoutDuration - elapsedTime) + "ms remaining");
-      }
-      
-      if (elapsedTime >= timeoutDuration) {
-        timeoutOccurred = true;
-        Serial.println("FEED_TO_DISTANCE: TIMEOUT DETECTED at " + String(elapsedTime) + "ms");
-        Serial.println("FEED_TO_DISTANCE: Timeout variables - feedMotorMoving: " + String(feedMotorMoving) + ", distanceSensorTriggered: " + String(distanceSensorTriggered) + ", timeoutOccurred: " + String(timeoutOccurred));
-      }
+    // Single 2-second timeout for safety
+    if (elapsedTime >= 2000) {
+      timeoutOccurred = true;
+      Serial.println("FEED_TO_DISTANCE: TIMEOUT - Feed motor ran for 2 seconds without triggering distance sensor");
     }
   }
   
@@ -245,42 +231,7 @@ void updateFeedToDistanceState() {
     return;
   }
   
-  //! ************************************************************************
-  //! DEBUG LOGGING FOR TIMEOUT MONITORING
-  //! ************************************************************************
-  // Debug logging for timeout troubleshooting - improved timing logic
-  if (feedMotorMoving && !distanceSensorTriggered && !timeoutOccurred) {
-    unsigned long elapsedTime = millis() - feedStartTime;
-    static unsigned long lastDebugTime = 0;
-    
-    // Use standard 2-second timeout for debug logging
-    unsigned long timeoutDuration = 2000;
-    
-    // Log every 500ms for better debugging
-    if (elapsedTime - lastDebugTime >= 500) {
-      Serial.println("FEED_TO_DISTANCE: Motor running for " + String(elapsedTime) + "ms, timeout at " + String(timeoutDuration) + "ms");
-      Serial.println("FEED_TO_DISTANCE: Debug - feedMotorMoving: " + String(feedMotorMoving) + ", distanceSensorTriggered: " + String(distanceSensorTriggered));
-      if (feedMotor) {
-        Serial.println("FEED_TO_DISTANCE: Debug - feedMotor->isRunning(): " + String(feedMotor->isRunning()));
-        // Additional motor state verification
-        if (!feedMotor->isRunning()) {
-          Serial.println("FEED_TO_DISTANCE: WARNING - Motor stopped unexpectedly at " + String(elapsedTime) + "ms");
-          feedMotorMoving = false; // Update flag to match actual state
-        }
-      }
-      lastDebugTime = elapsedTime;
-    }
-    
-    // Additional debug info when approaching timeout
-    if (elapsedTime >= (timeoutDuration - 200) && elapsedTime < timeoutDuration) {
-      Serial.println("FEED_TO_DISTANCE: WARNING - Approaching timeout in " + String(timeoutDuration - elapsedTime) + "ms");
-    }
-    
-    // Force timeout check every 100ms when approaching timeout
-    if (elapsedTime >= (timeoutDuration - 100)) {
-      Serial.println("FEED_TO_DISTANCE: CRITICAL - At " + String(elapsedTime) + "ms, forcing timeout check");
-    }
-  }
+
   
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
   if (feedDistanceSensor.read() == HIGH && !distanceSensorTriggered) {
@@ -359,7 +310,6 @@ void exitFeedToDistanceState() {
   distanceSensorTriggered = false;
   delayComplete = false;
   timeoutOccurred = false;
-  lastTimeoutCheck = 0;
   
   // SIMPLIFIED: Remove unnecessary wood detection tracking
   // The system already knows wood is present when entering this state
