@@ -30,11 +30,6 @@ enum CuttingStep {
 };
 
 static CuttingStep currentStep = STEP_ACTIVATE_MOTORS;
-static bool feedMotorStarted = false;
-static bool cutMotorStarted = false;
-static bool distanceSensorTriggered = false;
-static bool cutMotorForwardComplete = false;
-static bool cutMotorReturnComplete = false;
 
 void enterCuttingState() {
   // Check only wood presence at the beginning
@@ -46,7 +41,6 @@ void enterCuttingState() {
   
   // Wood present - proceed with cutting cycle
   Serial.println("CUTTING: Wood detected - starting simple cutting cycle");
-  Serial.println("CUTTING: NOTE: Cycle will complete regardless of cycle switch state during operation");
   
   // Initialize distance sensor
   distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
@@ -55,18 +49,12 @@ void enterCuttingState() {
   // Enable motors
   enableAllMotors();
   
-  // Reset all step variables
+  // Start at step 1
   currentStep = STEP_ACTIVATE_MOTORS;
-  feedMotorStarted = false;
-  cutMotorStarted = false;
-  distanceSensorTriggered = false;
-  cutMotorForwardComplete = false;
-  cutMotorReturnComplete = false;
   
   // Ensure feed motor is stopped before starting
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
-    Serial.println("CUTTING: Stopped feed motor before starting cutting cycle");
   }
 }
 
@@ -116,14 +104,12 @@ void updateActivateMotorsStep() {
   if (feedMotor) {
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
-    Serial.println("CUTTING: Feed motor configured and ready");
   }
   
   // Activate cut motor
   if (cutMotor) {
     cutMotor->setSpeedInHz(cutMotorSpeed);
     cutMotor->setAcceleration(cutMotorAcceleration);
-    Serial.println("CUTTING: Cut motor configured and ready");
   }
   
   // Move to next step
@@ -153,22 +139,18 @@ void updateRetractClampStep() {
 //* ************************************************************************
 void updateFeedForwardStep() {
   // Start feed motor if not already started
-  if (!feedMotorStarted && feedMotor) {
+  if (feedMotor && !feedMotor->isRunning()) {
     Serial.println("CUTTING: Step 3 - Starting feed motor forward movement");
     feedMotor->runForward(); // Continuous forward movement
-    feedMotorStarted = true;
   }
   
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
-  if (distanceSensor.read() == HIGH && !distanceSensorTriggered) {
+  if (distanceSensor.read() == HIGH) {
     Serial.println("CUTTING: Distance sensor triggered - stopping feed motor");
-    distanceSensorTriggered = true;
     
     // Stop the feed motor
     if (feedMotor) {
       feedMotor->forceStop();
-      feedMotorStarted = false;
-      Serial.println("CUTTING: Feed motor stopped successfully");
     }
     
     // Move to next step
@@ -199,16 +181,14 @@ void updateExtendClampStep() {
 //* ************************************************************************
 void updateCutWoodStep() {
   // Start cut motor forward movement if not already started
-  if (!cutMotorStarted && cutMotor) {
+  if (cutMotor && !cutMotor->isRunning()) {
     Serial.println("CUTTING: Step 5 - Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
     cutMotor->move(cutMotorSteps);
-    cutMotorStarted = true;
   }
   
   // Check if cutting movement is complete
-  if (cutMotorStarted && cutMotor && !cutMotor->isRunning()) {
+  if (cutMotor && !cutMotor->isRunning()) {
     Serial.println("CUTTING: Cut motor forward movement complete");
-    cutMotorForwardComplete = true;
     
     // Move to next step
     currentStep = STEP_RETURN_CUT_MOTOR;
@@ -221,7 +201,7 @@ void updateCutWoodStep() {
 //* ************************************************************************
 void updateReturnCutMotorStep() {
   // Start cut motor return movement if not already started
-  if (!cutMotorReturnComplete && cutMotor) {
+  if (cutMotor && !cutMotor->isRunning()) {
     Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
     cutMotor->move(-cutMotorSteps);
   }
@@ -229,7 +209,6 @@ void updateReturnCutMotorStep() {
   // Check if return movement is complete
   if (cutMotor && !cutMotor->isRunning()) {
     Serial.println("CUTTING: Cut motor return movement complete");
-    cutMotorReturnComplete = true;
     
     // Move to next step
     currentStep = STEP_CHECK_CONDITIONS;
@@ -247,14 +226,8 @@ void updateCheckConditionsStep() {
   if (isWoodPresent() && isRunCycleSwitchActive()) {
     Serial.println("CUTTING: Conditions met - starting another cutting cycle");
     
-    // Reset step variables for next cycle
+    // Reset to step 1 for next cycle
     currentStep = STEP_ACTIVATE_MOTORS;
-    feedMotorStarted = false;
-    cutMotorStarted = false;
-    distanceSensorTriggered = false;
-    cutMotorForwardComplete = false;
-    cutMotorReturnComplete = false;
-    
     Serial.println("CUTTING: Reset complete - starting new cycle at Step 1");
   } else {
     if (!isWoodPresent()) {
@@ -271,17 +244,9 @@ void updateCheckConditionsStep() {
 void exitCuttingState() {
   // Ensure feed motor is stopped before exiting
   if (feedMotor && feedMotor->isRunning()) {
-    Serial.println("CUTTING: Exit - stopping feed motor");
     feedMotor->forceStop();
   }
   
-  // Reset all step variables
+  // Reset to step 1
   currentStep = STEP_ACTIVATE_MOTORS;
-  feedMotorStarted = false;
-  cutMotorStarted = false;
-  distanceSensorTriggered = false;
-  cutMotorForwardComplete = false;
-  cutMotorReturnComplete = false;
-  
-  Serial.println("CUTTING: Exit - all variables reset");
 } 
