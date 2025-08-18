@@ -211,7 +211,7 @@ void processSerialCommand(String command) {
   else if (command == "reload") {
     if (isSystemIdle()) {
       // Check if right switch is active before starting reload mode
-      if (digitalRead(RIGHT_SWITCH_PIN) == HIGH) {
+      if (digitalRead(RELOAD_SWITCH_PIN) == HIGH) {
         Serial.println("Starting reload mode - RIGHT SWITCH ACTIVE");
         transitionToState(STATE_RELOAD);
       } else {
@@ -223,7 +223,7 @@ void processSerialCommand(String command) {
   }
   else if (command == "testreload") {
     Serial.println("=== RELOAD SWITCH TEST ===");
-    Serial.println("Raw pin value: " + String(digitalRead(RIGHT_SWITCH_PIN)));
+    Serial.println("Raw pin value: " + String(digitalRead(RELOAD_SWITCH_PIN)));
     Serial.println("Bounce2 state: " + String(rightSwitch.read()));
     Serial.println("isRightSwitchActive(): " + String(isRightSwitchActive()));
     Serial.println("Current system state: " + getCurrentStateName());

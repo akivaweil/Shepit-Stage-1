@@ -305,12 +305,7 @@ void updateStateMachine() {
   // Update all sensors first (debouncing)
   updateAllSensors();
   
-  // Debug: Log sensor update frequency
-  static unsigned long lastSensorUpdateDebug = 0;
-  if (millis() - lastSensorUpdateDebug >= 10000) { // Log every 10 seconds
-    Serial.println("Sensor update frequency check - updateStateMachine called every ~10ms");
-    lastSensorUpdateDebug = millis();
-  }
+  // Reduced logs: no periodic frequency print
   
   // Update the current state
   switch (currentSystemState) {

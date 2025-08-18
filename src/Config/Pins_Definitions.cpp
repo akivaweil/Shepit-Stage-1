@@ -21,8 +21,8 @@ const int BUTTON_PIN = 9;
 // Run cycle switch pin (active high)
 const int RUN_CYCLE_SWITCH_PIN = 10;
 
-// Right switch pin (active high)
-const int RIGHT_SWITCH_PIN = 41;
+// Reload switch pin (active high)
+const int RELOAD_SWITCH_PIN = 41;
 
 // Red button pin (active high)
 const int RED_BUTTON_PIN = 39;

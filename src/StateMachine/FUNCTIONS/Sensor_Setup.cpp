@@ -26,10 +26,8 @@ void initializeFeedDistanceSensor() {
   feedDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   feedDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
-  // Debug: Log initialization
-  Serial.println("Feed distance sensor initialized on pin " + String(WOOD_DISTANCE_SENSOR_PIN) + 
-                 " with debounce time " + String(distanceSensorDebounceTime) + "ms" +
-                 " (INPUT_PULLDOWN mode)");
+  // Minimal log
+  Serial.println("Init: Distance sensor");
 }
 
 void initializeWoodPresenceSensor() {
@@ -38,10 +36,8 @@ void initializeWoodPresenceSensor() {
   woodPresenceSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
   woodPresenceSensor.interval(distanceSensorDebounceTime); // Use same debounce time
   
-  // Debug: Log initialization
-  Serial.println("Wood presence sensor initialized on pin " + String(WOOD_PRESENT_SENSOR_PIN) + 
-                 " with debounce time " + String(distanceSensorDebounceTime) + "ms" +
-                 " (INPUT_PULLUP mode - active LOW)");
+  // Minimal log
+  Serial.println("Init: Wood presence sensor");
 }
 
 void initializeRunCycleSwitch() {
@@ -50,22 +46,18 @@ void initializeRunCycleSwitch() {
   runCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT);
   runCycleSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
-  // Debug: Log initialization
-  Serial.println("Run cycle switch initialized on pin " + String(RUN_CYCLE_SWITCH_PIN) + 
-                 " with debounce time " + String(sensorDebounceTime) + "ms" +
-                 " (INPUT_PULLDOWN mode)");
+  // Minimal log
+  Serial.println("Init: Run cycle switch");
 }
 
 void initializeRightSwitch() {
   // Initialize right switch with proper debouncing
-  pinMode(RIGHT_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown
-  rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT);
+  pinMode(RELOAD_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown
+  rightSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
   rightSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
-  // Debug: Log initialization
-  Serial.println("Right switch initialized on pin " + String(RIGHT_SWITCH_PIN) + 
-                 " with debounce time " + String(sensorDebounceTime) + "ms" +
-                 " (INPUT_PULLDOWN mode)");
+  // Minimal log
+  Serial.println("Init: Reload switch");
 }
 
 void initializeRedButton() {
@@ -74,32 +66,30 @@ void initializeRedButton() {
   redButton.attach(RED_BUTTON_PIN, INPUT);
   redButton.interval(sensorDebounceTime); // Standard sensor debounce
   
-  // Debug: Log initialization
-  Serial.println("Red button initialized on pin " + String(RED_BUTTON_PIN) + 
-                 " with debounce time " + String(sensorDebounceTime) + "ms" +
-                 " (INPUT_PULLDOWN mode)");
+  // Minimal log
+  Serial.println("Init: Red button");
 }
 
 void initializeAllSensors() {
   // Initialize all sensors at once
-  Serial.println("Starting sensor initialization...");
+  Serial.println("Initializing sensors...");
   
   initializeFeedDistanceSensor();
-  Serial.println("Feed distance sensor initialized");
+  
   
   initializeWoodPresenceSensor();
-  Serial.println("Wood presence sensor initialized");
+  
   
   initializeRunCycleSwitch();
-  Serial.println("Run cycle switch initialized");
+  
   
   initializeRightSwitch();
-  Serial.println("Right switch (reload) initialized");
+  
   
   initializeRedButton();
-  Serial.println("Red button initialized");
   
-  Serial.println("All sensors initialized successfully");
+  
+  Serial.println("Sensors initialized");
 }
 
 //* ************************************************************************
@@ -121,21 +111,7 @@ void updateRunCycleSwitch() {
 void updateRightSwitch() {
   rightSwitch.update();
   
-  // Debug: Log switch state changes
-  static bool lastRightSwitchState = false;
-  bool currentRightSwitchState = rightSwitch.read() == HIGH;
-  
-  if (currentRightSwitchState != lastRightSwitchState) {
-    Serial.println("Right switch state changed to: " + String(currentRightSwitchState ? "ACTIVE" : "INACTIVE"));
-    lastRightSwitchState = currentRightSwitchState;
-  }
-  
-  // Additional debug: Log update frequency
-  static unsigned long lastUpdateDebug = 0;
-  if (millis() - lastUpdateDebug >= 10000) { // Log every 10 seconds
-    Serial.println("Right switch update frequency check - being updated every ~10ms");
-    lastUpdateDebug = millis();
-  }
+  // No periodic debug here to reduce noise
 }
 
 void updateRedButton() {
@@ -149,13 +125,6 @@ void updateAllSensors() {
   updateRunCycleSwitch();
   updateRightSwitch();
   updateRedButton();
-  
-  // Debug: Log sensor update frequency
-  static unsigned long lastAllSensorsDebug = 0;
-  if (millis() - lastAllSensorsDebug >= 15000) { // Log every 15 seconds
-    Serial.println("All sensors updated - frequency check");
-    lastAllSensorsDebug = millis();
-  }
 }
 
 //* ************************************************************************
@@ -173,31 +142,6 @@ bool isWoodPresenceSensorActive() {
 
 bool isRightSwitchActive() {
   bool switchState = rightSwitch.read() == HIGH;
-  
-  // Debug: Log switch reads occasionally
-  static unsigned long lastSwitchReadDebug = 0;
-  if (millis() - lastSwitchReadDebug >= 5000) { // Log every 5 seconds
-    Serial.println("Right switch read: " + String(switchState ? "ACTIVE" : "INACTIVE") + 
-                   " (raw: " + String(rightSwitch.read()) + ")");
-    lastSwitchReadDebug = millis();
-  }
-  
-  // Additional debug: Log every switch read for troubleshooting
-  static bool lastSwitchState = false;
-  if (switchState != lastSwitchState) {
-    Serial.println("Right switch state change detected: " + String(switchState ? "ACTIVE" : "INACTIVE"));
-    lastSwitchState = switchState;
-  }
-  
-  // Additional debug: Log raw pin value for comparison
-  static unsigned long lastRawPinDebug = 0;
-  if (millis() - lastRawPinDebug >= 3000) { // Log every 3 seconds
-    int rawPinValue = digitalRead(RIGHT_SWITCH_PIN);
-    Serial.println("Right switch comparison - Bounce2: " + String(rightSwitch.read()) + 
-                   ", Raw pin: " + String(rawPinValue) + 
-                   ", Processed: " + String(switchState ? "ACTIVE" : "INACTIVE"));
-    lastRawPinDebug = millis();
-  }
   
   return switchState;
 }
@@ -235,7 +179,7 @@ void resetRunCycleSwitch() {
 
 void resetRightSwitch() {
   // Bounce2 doesn't have a reset method, just reinitialize
-  rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT);
+  rightSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
   rightSwitch.interval(sensorDebounceTime);
 }
 

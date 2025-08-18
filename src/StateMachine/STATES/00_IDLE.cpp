@@ -95,10 +95,8 @@ void updateIdleState() {
   
   // Debug: Verify sensor updates are working
   static unsigned long lastSensorDebug = 0;
-  if (millis() - lastSensorDebug >= 2000) { // Log every 2 seconds
-    Serial.println("IDLE: Sensor status - Right switch: " + String(isRightSwitchActive() ? "ACTIVE" : "INACTIVE") + 
-                   ", Raw pin: " + String(digitalRead(RIGHT_SWITCH_PIN)) + 
-                   ", Bounce2 state: " + String(rightSwitch.read()));
+  if (millis() - lastSensorDebug >= 5000) { // Log every 5 seconds (reduced)
+    Serial.println("IDLE: Right switch: " + String(isRightSwitchActive() ? "ACTIVE" : "INACTIVE"));
     lastSensorDebug = millis();
   }
   
@@ -390,9 +388,8 @@ void updateIdleState() {
   
   // Debug logging for reload switch monitoring
   static unsigned long lastReloadSwitchDebug = 0;
-  if (millis() - lastReloadSwitchDebug >= 1000) { // Log every second
-    Serial.println("IDLE: Monitoring reload switch - State: " + String(reloadSwitchActive ? "ACTIVE" : "INACTIVE") + 
-                   " (Raw pin value: " + String(digitalRead(RIGHT_SWITCH_PIN)) + ")");
+  if (millis() - lastReloadSwitchDebug >= 3000) { // Log every 3 seconds (reduced)
+    Serial.println("IDLE: Reload switch: " + String(reloadSwitchActive ? "ACTIVE" : "INACTIVE"));
     lastReloadSwitchDebug = millis();
   }
   

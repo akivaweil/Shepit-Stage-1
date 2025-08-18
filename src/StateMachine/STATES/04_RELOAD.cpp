@@ -30,7 +30,7 @@ void enterReloadState() {
   reloadMotorMoving = false;
   
   // Check if right switch is still active before proceeding
-  if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
+  if (digitalRead(RELOAD_SWITCH_PIN) != HIGH) {
     Serial.println("RELOAD: RIGHT SWITCH NOT ACTIVE - Returning to IDLE immediately");
     transitionToState(STATE_IDLE);
     return;
@@ -98,12 +98,12 @@ void updateReloadState() {
   //! SAFETY CHECK: RIGHT SWITCH DEACTIVATION DETECTION
   //! ************************************************************************
   // Check if right switch is turned off during operation - return to idle immediately
-  bool rightSwitchActive = digitalRead(RIGHT_SWITCH_PIN) == HIGH;
+  bool rightSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
   
   // Debug logging for switch state monitoring
   static bool lastRightSwitchState = false;
   if (rightSwitchActive != lastRightSwitchState) {
-    Serial.println("RELOAD: Right switch state changed to: " + String(rightSwitchActive ? "ACTIVE" : "INACTIVE"));
+    Serial.println("Reload switch: " + String(rightSwitchActive ? "ACTIVE" : "INACTIVE"));
     lastRightSwitchState = rightSwitchActive;
   }
   
@@ -149,7 +149,8 @@ void updateReloadState() {
     // Check for timeout every 1000ms for step movement
     if (elapsedTime % 1000 == 0) {
       // Debug timeout progress
-      Serial.println("RELOAD: Timeout progress - " + String(elapsedTime) + "ms elapsed, " + String(RELOAD_TIMEOUT_MS - elapsedTime) + "ms remaining");
+      // Reduced periodic timeout log
+      Serial.println("RELOAD: Timeout " + String(elapsedTime) + "/" + String(RELOAD_TIMEOUT_MS) + "ms");
     }
     
     if (elapsedTime >= RELOAD_TIMEOUT_MS) {
@@ -196,7 +197,8 @@ void updateReloadState() {
     
     // Log every 1000ms for better debugging
     if (elapsedTime - lastDebugTime >= 1000) {
-      Serial.println("RELOAD: Motor running for " + String(elapsedTime) + "ms, timeout at " + String(RELOAD_TIMEOUT_MS) + "ms");
+      // Reduced periodic runtime log
+      Serial.println("RELOAD: Running " + String(elapsedTime) + "/" + String(RELOAD_TIMEOUT_MS) + "ms");
       if (feedMotor) {
         // Additional motor state verification
         if (!feedMotor->isRunning()) {
@@ -209,7 +211,8 @@ void updateReloadState() {
     
     // Additional debug info when approaching timeout
     if (elapsedTime >= 4000 && elapsedTime < RELOAD_TIMEOUT_MS) {
-      Serial.println("RELOAD: WARNING - Approaching timeout in " + String(RELOAD_TIMEOUT_MS - elapsedTime) + "ms");
+      // Keep concise
+      Serial.println("RELOAD: Approaching timeout");
     }
   }
   
