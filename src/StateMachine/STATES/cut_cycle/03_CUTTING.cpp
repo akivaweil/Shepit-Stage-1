@@ -311,13 +311,18 @@ void updateCheckConditionsStep() {
     Serial.println("CUTTING: Reset complete - starting new cycle at Step 1");
   } else {
     if (!isWoodPresent()) {
-      Serial.println("CUTTING: No wood detected - cutting cycle complete, returning to IDLE");
+      Serial.println("CUTTING: No wood detected - cutting cycle complete, transitioning to RELOAD");
     } else {
-      Serial.println("CUTTING: Run cycle switch not active - cutting cycle complete, returning to IDLE");
+      Serial.println("CUTTING: Run cycle switch not active - cutting cycle complete, transitioning to RELOAD");
     }
     
-    // Return to idle state
-    transitionToState(STATE_IDLE);
+    //! ************************************************************************
+    //! AUTOMATIC TRANSITION TO RELOAD AFTER CUTTING
+    //! ************************************************************************
+    // After cutting is complete, automatically transition to reload to clear the cutting area
+    // This ensures the operator doesn't have to reach in near the spinning saw blade
+    Serial.println("CUTTING: Automatically transitioning to RELOAD state to clear cutting area");
+    transitionToState(STATE_RELOAD);
   }
 }
 
