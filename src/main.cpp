@@ -268,7 +268,7 @@ void processSerialCommand(String command) {
     Serial.println("System:");
     Serial.println("  status - Show system status");
     Serial.println("  sequence - Start cutting sequence manually");
-    Serial.println("  reload - Start reload mode (feed motor reverse)");
+    Serial.println("  reload - Start reload mode (feed motor moves 5000 steps reverse)");
     Serial.println("  stopreload - Stop reload mode and return to IDLE");
     Serial.println("  stop/emergency - Emergency stop");
     Serial.println("  idle - Return to IDLE state");
