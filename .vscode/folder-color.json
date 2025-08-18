@@ -25,6 +25,11 @@
             "badge": "🛠️"
         },
         {
+            "folderPath": "src/StateMachine/STATES/cut_cycle/",
+            "color": "foldercolorizer.color_00ffff",
+            "badge": "✂️"
+        },
+        {
             "folderPath": "include/",
             "color": "foldercolorizer.color_cc0099",
             "badge": "📁"
