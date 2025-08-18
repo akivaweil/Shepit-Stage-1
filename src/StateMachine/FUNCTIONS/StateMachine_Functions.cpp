@@ -293,3 +293,18 @@ void initializeStateMachine() {
   
   Serial.println("State machine initialized - starting in IDLE state");
 }
+
+//* ************************************************************************
+//* *********************** STATE IMPLEMENTATIONS **************************
+//* ************************************************************************
+// Include the actual state implementations
+
+// IDLE state
+#include "../STATES/00_IDLE.cpp"
+
+// Cut cycle states
+#include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
+#include "../STATES/cut_cycle/03_CUTTING.cpp"
+
+// Manual state
+#include "../STATES/06_MANUAL.cpp"
