@@ -35,13 +35,10 @@ static unsigned long returnMotorStartTime = 0;
 // Motor position tracking for return movement
 static float cutMotorStartPosition = 0.0;
 
-// Wood presence monitoring (unique names to avoid conflicts)
-static Bounce2::Button cuttingWoodPresenceSensor = Bounce2::Button();
+// Wood presence monitoring is now handled centrally in Sensor_Setup.cpp
 
 void enterCuttingState() {
-  // Initialize wood presence sensor monitoring
-  cuttingWoodPresenceSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
-  cuttingWoodPresenceSensor.interval(sensorDebounceTime);
+  // Sensors are now initialized centrally in initializeStateMachine()
   
 
   
@@ -66,8 +63,7 @@ void enterCuttingState() {
 }
 
 void updateCuttingState() {
-  // Update sensor debouncers
-  cuttingWoodPresenceSensor.update();
+  // Sensors are now updated centrally in updateStateMachine()
   
   // Note: Run cycle switch state is ignored during cutting operation
   // Cutting operation will complete regardless of switch state
@@ -185,7 +181,7 @@ void updateReturnCutMotorStep() {
 void updateCheckConditionsStep() {
   // Check if conditions are met for automatic cycle restart
   // Note: Only wood presence matters - run cycle switch state is ignored during cutting
-  bool woodStillPresent = cuttingWoodPresenceSensor.read();
+  bool woodStillPresent = isWoodPresent();
   
   if (woodStillPresent) {
     // Conditions met: automatically restart cutting cycle

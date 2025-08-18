@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <FastAccelStepper.h>
+#include <Bounce2.h>
 
 //* ************************************************************************
 //* *********************** STATE MACHINE DEFINITIONS *********************
@@ -105,8 +106,48 @@ bool isWoodPresent();
 // Wood distance sensor functions
 bool isWoodAtCorrectDistance();
 
-// Run cycle switch functions
+//* ************************************************************************
+//* *********************** SENSOR SETUP & DEBOUNCING **********************
+//* ************************************************************************
+
+// Sensor initialization functions
+void initializeFeedDistanceSensor();
+void initializeWoodPresenceSensor();
+void initializeRunCycleSwitch();
+void initializeRightSwitch();
+void initializeRedButton();
+void initializeAllSensors();
+
+// Sensor update functions
+void updateFeedDistanceSensor();
+void updateWoodPresenceSensor();
+void updateRunCycleSwitch();
+void updateRightSwitch();
+void updateRedButton();
+void updateAllSensors();
+
+// Sensor read functions
+bool isFeedDistanceSensorTriggered();
+bool isWoodPresenceSensorActive();
 bool isRunCycleSwitchActive();
+bool isRunCycleSwitchActiveCentralized();
+bool isRightSwitchActive();
+bool isRedButtonPressed();
+
+// Sensor reset functions
+void resetFeedDistanceSensor();
+void resetWoodPresenceSensor();
+void resetRunCycleSwitch();
+void resetRightSwitch();
+void resetRedButton();
+void resetAllSensors();
+
+// External references to sensor objects
+extern Bounce2::Button feedDistanceSensor;
+extern Bounce2::Button woodPresenceSensor;
+extern Bounce2::Button runCycleSwitch;
+extern Bounce2::Button rightSwitch;
+extern Bounce2::Button redButton;
 
 // Continuous feed functions
 void startContinuousFeed();

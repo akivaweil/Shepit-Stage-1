@@ -19,20 +19,7 @@ extern SystemState currentSystemState;
 // Distance sensor trigger: starts cutting cycle when activated (if conditions still met)
 // Note: Each cutting cycle includes its own positioning step to ensure wood is always in correct position
 
-// Wood sensor debouncer for IDLE state monitoring
-static Bounce2::Button idleWoodSensor = Bounce2::Button();
-
-// Run cycle switch debouncer for cutting cycle control
-static Bounce2::Button runCycleSwitch = Bounce2::Button();
-
-// Right switch debouncer for reload mode operation
-static Bounce2::Button rightSwitch = Bounce2::Button();
-
-// Red button debouncer for continuous feed operation
-static Bounce2::Button redButton = Bounce2::Button();
-
-// Distance sensor debouncer for feed motor stop control
-static Bounce2::Button idleDistanceSensor = Bounce2::Button();
+// Sensors are now handled centrally in Sensor_Setup.cpp
 
 // Feed motor control state tracking - SIMPLIFIED
 static bool feedMotorShouldRun = false;
@@ -56,25 +43,7 @@ void enterIdleState() {
   // This ensures a clean start and prevents any lingering flags from previous states
   resetAllStateMachineFlags();
   
-  // Initialize wood sensor monitoring
-  idleWoodSensor.attach(WOOD_PRESENT_SENSOR_PIN, INPUT);
-  idleWoodSensor.interval(sensorDebounceTime); // Standard sensor debounce
-  
-  // Initialize run cycle switch monitoring
-  runCycleSwitch.attach(RUN_CYCLE_SWITCH_PIN, INPUT);
-  runCycleSwitch.interval(sensorDebounceTime); // Standard sensor debounce
-  
-  // Initialize right switch monitoring
-  rightSwitch.attach(RIGHT_SWITCH_PIN, INPUT);
-  rightSwitch.interval(sensorDebounceTime); // Standard sensor debounce
-  
-  // Initialize red button monitoring
-  redButton.attach(RED_BUTTON_PIN, INPUT);
-  redButton.interval(sensorDebounceTime); // Standard sensor debounce
-  
-  // Initialize distance sensor monitoring for feed motor stop control
-  idleDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
-  idleDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
+  // Sensors are now initialized centrally in initializeStateMachine()
   
   // Enable motors when entering idle state
   enableAllMotors();
@@ -122,12 +91,7 @@ void enterIdleState() {
 }
 
 void updateIdleState() {
-  // Update all debouncers
-  idleWoodSensor.update();
-  runCycleSwitch.update();
-  rightSwitch.update();
-  redButton.update();
-  idleDistanceSensor.update();
+  // Sensors are now updated centrally in updateStateMachine()
   
   //! ************************************************************************
   //! FEED MOTOR CONTROL LOGIC - SIMPLIFIED AND FIXED
@@ -393,53 +357,20 @@ void updateIdleState() {
   }
   
   // Check for wood detection (active LOW - sensor reads 0 when wood detected)
-  if (idleWoodSensor.fell()) {
-    // Only start sequence if run cycle switch is active
-    if (isRunCycleSwitchActive()) {
-      Serial.println("Wood detected - starting FEED TO DISTANCE sequence");
-      transitionToState(STATE_FEED_TO_DISTANCE);
-    } else {
-      Serial.println("Wood detected - cycle switch not active (ignoring)");
-    }
-    return;
-  }
+  // Note: Edge detection is now handled by centralized sensor functions
+  // The main control logic above handles wood detection automatically
   
   // Check for run cycle switch activation (active HIGH - switch reads 1 when triggered)
-  if (runCycleSwitch.rose()) {
-    Serial.println("Run cycle switch: ACTIVATED");
-    
-    // If wood is present, feed motor will start automatically via the main control logic above
-    if (isWoodPresent()) {
-      Serial.println("Status: Wood present + cycle switch active - feed motor will start");
-    }
-  }
-  
-  // Check for run cycle switch deactivation (switch released)
-  if (runCycleSwitch.fell()) {
-    Serial.println("Run cycle switch: DEACTIVATED");
-    // Feed motor will stop automatically via the main control logic above
-  }
+  // Note: Edge detection is now handled by centralized sensor functions
+  // The main control logic above handles switch state changes automatically
   
   // Check for right switch activation (active HIGH - switch reads 1 when triggered)
-  if (rightSwitch.rose()) {
-    Serial.println("Right switch: ACTIVATED - starting RELOAD mode");
-    transitionToState(STATE_RELOAD);
-  }
-  
-  // Note: Right switch deactivation is now handled by the reload state itself
-  // The reload state will automatically return to IDLE when the switch is released
+  // Note: Edge detection is now handled by centralized sensor functions
+  // The main control logic above handles switch state changes automatically
   
   // Check for red button activation (active HIGH - button reads 1 when pressed)
-  if (redButton.rose()) {
-    Serial.println("Red button: PRESSED - starting continuous feed");
-    startContinuousFeed();
-  }
-  
-  // Check for red button deactivation (button released)
-  if (redButton.fell()) {
-    Serial.println("Red button: RELEASED - stopping continuous feed");
-    stopContinuousFeed();
-  }
+  // Note: Edge detection is now handled by centralized sensor functions
+  // The main control logic above handles button state changes automatically
   
   // Sleep mode functionality is handled by checkMotorTimeout() in main loop
 }

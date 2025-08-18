@@ -136,7 +136,8 @@ bool isClampRetracted() {
 
 bool isWoodPresent() {
   // Wood present sensor is active LOW - returns true when wood is detected
-  return digitalRead(WOOD_PRESENT_SENSOR_PIN) == LOW;
+  // Use centralized sensor function for reliable detection
+  return isWoodPresenceSensorActive();
 }
 
 //* ************************************************************************
@@ -145,7 +146,8 @@ bool isWoodPresent() {
 
 bool isWoodAtCorrectDistance() {
   // Wood distance sensor is active HIGH - returns true when wood is at correct distance
-  return digitalRead(WOOD_DISTANCE_SENSOR_PIN) == HIGH;
+  // Use centralized sensor function for reliable detection
+  return isFeedDistanceSensorTriggered();
 }
 
 //* ************************************************************************
@@ -154,7 +156,8 @@ bool isWoodAtCorrectDistance() {
 
 bool isRunCycleSwitchActive() {
   // Run cycle switch is active HIGH - returns true when switch is ON
-  return digitalRead(RUN_CYCLE_SWITCH_PIN) == HIGH;
+  // Use centralized sensor function for reliable detection
+  return isRunCycleSwitchActiveCentralized();
 }
 
 //* ************************************************************************
@@ -299,6 +302,9 @@ void transitionToState(SystemState newState) {
 }
 
 void updateStateMachine() {
+  // Update all sensors first (debouncing)
+  updateAllSensors();
+  
   // Update the current state
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
@@ -317,6 +323,9 @@ void initializeStateMachine() {
   motorsEnabled = true;  // Motors are permanently enabled
   manualMode = false;
   
+  // Initialize all sensors first
+  initializeAllSensors();
+  
   // Start in idle state
   currentSystemState = STATE_IDLE;
   previousSystemState = STATE_IDLE;
@@ -330,6 +339,8 @@ void initializeStateMachine() {
 //* ************************************************************************
 //* *********************** STATE IMPLEMENTATIONS **************************
 //* ************************************************************************
+
+
 // Include the actual state implementations
 
 // IDLE state
