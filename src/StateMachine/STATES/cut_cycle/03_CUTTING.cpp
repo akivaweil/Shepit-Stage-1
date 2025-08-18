@@ -16,7 +16,7 @@
 // 7. Check whether the run cycle && wood present sensors are active. If they are, return to step 1. If not, return to idle state and wait.
 
 // Wood distance sensor debouncer
-static Bounce2::Button distanceSensor = Bounce2::Button();
+static Bounce2::Button cuttingDistanceSensor = Bounce2::Button();
 
 // Cutting cycle steps
 enum CuttingStep {
@@ -31,6 +31,19 @@ enum CuttingStep {
 
 static CuttingStep currentStep = STEP_ACTIVATE_MOTORS;
 
+//! ************************************************************************
+//! CUT CYCLE STATE VARIABLES - RESET AT BEGINNING OF EACH CYCLE
+//! ************************************************************************
+// These variables track the state of each step and must be reset for each new cycle
+
+// Cut motor step tracking variables
+static bool cutMotorStarted = false;
+static int32_t cutStartPosition = 0;
+
+// Return motor step tracking variables  
+static bool returnMotorStarted = false;
+static int32_t returnStartPosition = 0;
+
 void enterCuttingState() {
   // Check only wood presence at the beginning
   if (!isWoodPresent()) {
@@ -43,8 +56,8 @@ void enterCuttingState() {
   Serial.println("CUTTING: Wood detected - starting simple cutting cycle");
   
   // Initialize distance sensor
-  distanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
-  distanceSensor.interval(50); // 50ms debounce
+  cuttingDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
+  cuttingDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
   // Enable motors
   enableAllMotors();
@@ -57,13 +70,23 @@ void enterCuttingState() {
     feedMotor->forceStop();
   }
   
-  // Reset motor position tracking variables
-  // Note: Static variables in step functions will be reset when those functions are called
+  //! ************************************************************************
+  //! RESET ALL CUT CYCLE FLAGS AND VARIABLES
+  //! ************************************************************************
+  // Reset all static variables and flags to ensure clean start of each cycle
+  
+  // Reset cut motor step flags
+  resetCutMotorStepFlags();
+  
+  // Reset return motor step flags  
+  resetReturnMotorStepFlags();
+  
+  Serial.println("CUTTING: All cut cycle flags and variables reset for new cycle");
 }
 
 void updateCuttingState() {
   // Update distance sensor
-  distanceSensor.update();
+  cuttingDistanceSensor.update();
   
   // Handle different steps of the cutting cycle
   switch (currentStep) {
@@ -148,7 +171,7 @@ void updateFeedForwardStep() {
   }
   
   // Check if distance sensor is triggered (active HIGH - HIGH when wood detected)
-  if (distanceSensor.read() == HIGH) {
+  if (cuttingDistanceSensor.read() == HIGH) {
     Serial.println("CUTTING: Distance sensor triggered - stopping feed motor");
     
     // Stop the feed motor
@@ -183,9 +206,6 @@ void updateExtendClampStep() {
 //* *********************** STEP 5: CUT WOOD ******************************
 //* ************************************************************************
 void updateCutWoodStep() {
-  static bool cutMotorStarted = false;
-  static int32_t cutStartPosition = 0;
-  
   // Start cut motor forward movement if not already started
   if (!cutMotorStarted && cutMotor) {
     Serial.println("CUTTING: Step 5 - Starting cut motor forward movement (" + String(cutMotorSteps) + " steps)");
@@ -233,9 +253,6 @@ void updateCutWoodStep() {
 //* *********************** STEP 6: RETURN CUT MOTOR **********************
 //* ************************************************************************
 void updateReturnCutMotorStep() {
-  static bool returnMotorStarted = false;
-  static int32_t returnStartPosition = 0;
-  
   // Start cut motor return movement if not already started
   if (!returnMotorStarted && cutMotor) {
     Serial.println("CUTTING: Step 6 - Starting cut motor return movement (" + String(cutMotorSteps) + " steps)");
@@ -302,6 +319,28 @@ void updateCheckConditionsStep() {
     // Return to idle state
     transitionToState(STATE_IDLE);
   }
+}
+
+//* ************************************************************************
+//* *********************** FLAG RESET FUNCTIONS **************************
+//* ************************************************************************
+// These functions reset all static variables and flags used in the cutting cycle steps
+// They ensure each new cutting cycle starts with clean state
+
+void resetCutMotorStepFlags() {
+  // Reset cut motor step tracking variables
+  cutMotorStarted = false;
+  cutStartPosition = 0;
+  
+  Serial.println("CUTTING: Cut motor step flags reset");
+}
+
+void resetReturnMotorStepFlags() {
+  // Reset return motor step tracking variables
+  returnMotorStarted = false;
+  returnStartPosition = 0;
+  
+  Serial.println("CUTTING: Return motor step flags reset");
 }
 
 void exitCuttingState() {

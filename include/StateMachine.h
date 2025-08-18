@@ -108,6 +108,10 @@ void updateCutWoodStep();
 void updateReturnCutMotorStep();
 void updateCheckConditionsStep();
 
+// Cutting cycle flag reset functions
+void resetCutMotorStepFlags();
+void resetReturnMotorStepFlags();
+
 void enterManualState();
 void updateManualState();
 void exitManualState();
