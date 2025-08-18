@@ -212,7 +212,6 @@ void updateIdleState() {
       // CRITICAL FIX: Also reset the should-run state to force re-evaluation
       feedMotorShouldRun = false;
       Serial.println("Forcing feed motor state update due to cycle switch ON");
-      Serial.println("Debug: feedMotorShouldRun=" + String(feedMotorShouldRun) + ", feedMotorWasRunning=" + String(feedMotorWasRunning));
     } else {
       Serial.println("Cycle switch: OFF - stopping feed motor");
       // Ensure feed motor stops immediately
@@ -312,12 +311,7 @@ void updateIdleState() {
       feedMotorWasRunning = feedMotorShouldRun;
     }
   } else {
-    // Debug: Log when state variables are the same (this might indicate the issue)
-    static unsigned long lastDebugTime = 0;
-    if (millis() - lastDebugTime >= 1000) { // Log every second
-      Serial.println("Debug: feedMotorShouldRun=" + String(feedMotorShouldRun) + ", feedMotorWasRunning=" + String(feedMotorWasRunning) + ", runCycleActive=" + String(runCycleActive) + ", woodPresent=" + String(woodPresent));
-      lastDebugTime = millis();
-    }
+    // State variables are the same - no action needed
   }
   
   //! ************************************************************************

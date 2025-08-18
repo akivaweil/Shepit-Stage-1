@@ -351,8 +351,6 @@ void initializeStateMachine() {
 
 // External references to state variables that need resetting
 extern CuttingStep currentStep; // From CUTTING state
-extern int32_t cutStartPosition; // From CUTTING state
-extern int32_t returnStartPosition; // From CUTTING state
 
 void resetAllStateMachineFlags() {
   Serial.println("=== RESETTING ALL STATE MACHINE FLAGS ===");
@@ -387,10 +385,6 @@ void resetCuttingCycleFlags() {
   
   // Reset cutting step to beginning
   currentStep = STEP_ACTIVATE_MOTORS;
-  
-  // Reset motor position tracking
-  cutStartPosition = 0;
-  returnStartPosition = 0;
   
   Serial.println("Cutting cycle flags reset - ready for new cycle");
 }
