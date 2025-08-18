@@ -165,10 +165,26 @@ void updateFeedToDistanceState() {
       Serial.println("FEED_TO_DISTANCE: Initial position when wood lost: " + String(initialPositionWhenWoodLost));
     }
     
+    // Continuous check: if wood is lost and we're not in wood detection mode, start it
+    if (woodDetectedAtStart && !currentWoodPresent && !woodLostDuringFeed) {
+      Serial.println("FEED_TO_DISTANCE: WARNING - Wood lost but wood detection not activated, forcing activation");
+      woodLostDuringFeed = true;
+      initialPositionWhenWoodLost = feedMotor ? feedMotor->getCurrentPosition() : 0;
+      Serial.println("FEED_TO_DISTANCE: Forced wood detection activation - Initial position: " + String(initialPositionWhenWoodLost));
+    }
+    
     // If wood was lost, count steps and check if we've reached the limit
     if (woodLostDuringFeed && feedMotor) {
       int32_t currentPosition = feedMotor->getCurrentPosition();
       stepsAfterWoodLost = abs(currentPosition - initialPositionWhenWoodLost);
+      
+      // Debug logging for step counting
+      static unsigned long lastStepLogTime = 0;
+      if (millis() - lastStepLogTime >= 200) { // Log every 200ms
+        Serial.println("FEED_TO_DISTANCE: Wood detection progress - Steps: " + String(stepsAfterWoodLost) + "/" + String(STEPS_AFTER_WOOD_LOST) + 
+                      ", Position: " + String(currentPosition) + ", Initial: " + String(initialPositionWhenWoodLost));
+        lastStepLogTime = millis();
+      }
       
       // Check if we've reached the 1500 step limit
       if (stepsAfterWoodLost >= STEPS_AFTER_WOOD_LOST) {
