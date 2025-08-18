@@ -9,12 +9,15 @@
 // The CUTTING state handles the actual cutting operation in 3 focused steps:
 // Step 1: Cut Wood - Moves cut motor forward by cutMotorSteps distance
 // Step 2: Return Cut Motor - Returns cut motor to starting position using faster return speed
-// Step 3: Check Conditions - Determines if cutting cycle should restart or transition to RELOAD
+// Step 3: Check Conditions - Determines next action based on wood presence and run cycle switch
 //
 // This state is focused solely on cutting operations - no positioning or clamp management
 // Each step waits for motor movement completion before proceeding to the next
-// Automatic cycle restart if conditions are met (wood present only - run cycle switch ignored)
-// Note: Run cycle switch state is ignored during cutting to prevent interruption of critical operations
+// After cutting, checks both wood presence AND run cycle switch to determine next action:
+// - Both active: Return to FEED_TO_DISTANCE for next piece
+// - Wood present but run cycle off: Transition to IDLE
+// - No wood: Transition to RELOAD
+// Note: Run cycle switch state is now properly considered for cycle flow control
 
 // Cutting step enumeration for the 3-step process (unique to this state)
 enum CuttingStateStep {
@@ -179,31 +182,33 @@ void updateReturnCutMotorStep() {
 //* STEP 3: CHECK CONDITIONS - DETERMINE NEXT ACTION **********************
 //* ************************************************************************
 void updateCheckConditionsStep() {
-  // Check if conditions are met for automatic cycle restart
-  // Note: Only wood presence matters - run cycle switch state is ignored during cutting
+  // Check if conditions are met for next action
+  // Both wood presence AND run cycle switch state matter for proper cycle flow
   bool woodStillPresent = isWoodPresent();
+  bool runCycleStillActive = isRunCycleSwitchActive();
   
-  if (woodStillPresent) {
-    // Conditions met: automatically restart cutting cycle
-    Serial.println("CUTTING: Step 3 - Conditions met - restarting cutting cycle");
+  if (woodStillPresent && runCycleStillActive) {
+    // Both conditions met: go back to feeding for next piece
+    Serial.println("CUTTING: Step 3 - Conditions met - transitioning to FEED_TO_DISTANCE");
     Serial.println("CUTTING: Wood present: " + String(woodStillPresent ? "YES" : "NO"));
-    Serial.println("CUTTING: Run cycle switch state ignored during cutting operation");
+    Serial.println("CUTTING: Run cycle switch: " + String(runCycleStillActive ? "ON" : "OFF"));
+    Serial.println("CUTTING: Both conditions met - returning to feeding for next piece");
     
-    // Reset to Step 1 for next cutting cycle
-    currentCuttingStep = CUTTING_STEP_CUT_WOOD;
-    cutMotorStarted = false;
-    returnMotorStarted = false;
+    // Transition back to feeding state for next piece
+    transitionToState(STATE_FEED_TO_DISTANCE);
+  } else if (woodStillPresent && !runCycleStillActive) {
+    // Wood present but run cycle off: stop and wait
+    Serial.println("CUTTING: Step 3 - Run cycle deactivated - transitioning to IDLE");
+    Serial.println("CUTTING: Wood present: " + String(woodStillPresent ? "YES" : "NO"));
+    Serial.println("CUTTING: Run cycle switch: " + String(runCycleStillActive ? "ON" : "OFF"));
+    Serial.println("CUTTING: Run cycle deactivated - stopping operation");
     
-    // Update starting position for next cycle
-    if (cutMotor) {
-      cutMotorStartPosition = cutMotor->getCurrentPosition();
-    }
-    
-    Serial.println("CUTTING: Restarting cutting cycle - returning to Step 1");
+    transitionToState(STATE_IDLE);
   } else {
-    // Conditions not met: transition to RELOAD state
-    Serial.println("CUTTING: Step 3 - Conditions not met - transitioning to RELOAD state");
+    // No wood present: transition to RELOAD state
+    Serial.println("CUTTING: Step 3 - No wood present - transitioning to RELOAD state");
     Serial.println("CUTTING: Wood present: " + String(woodStillPresent ? "YES" : "NO"));
+    Serial.println("CUTTING: Run cycle switch: " + String(runCycleStillActive ? "ON" : "OFF"));
     Serial.println("CUTTING: No wood present - cutting cycle complete");
     
     transitionToState(STATE_RELOAD);
