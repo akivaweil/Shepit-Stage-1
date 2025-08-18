@@ -26,6 +26,9 @@ unsigned long cycleStartTime = 0;
 bool emergencyStopRequested = false;
 const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent accidental stops
 
+// Feed motor timeout lock - prevents restart after timeout until manually reset
+bool feedMotorTimeoutLocked = false;
+
 //* ************************************************************************
 //* *********************** MOTOR ENABLE FUNCTIONS ************************
 //* ************************************************************************
@@ -218,6 +221,28 @@ void stopReloadMode() {
     transitionToState(STATE_IDLE);
   } else {
     Serial.println("Not in reload mode");
+  }
+}
+
+//* ************************************************************************
+//* *********************** FEED MOTOR TIMEOUT LOCK FUNCTIONS *********************
+//* ************************************************************************
+
+void resetFeedMotorTimeoutLock() {
+  feedMotorTimeoutLocked = false;
+  Serial.println("Feed motor timeout lock RESET - motor can now restart");
+}
+
+bool isFeedMotorTimeoutLocked() {
+  return feedMotorTimeoutLocked;
+}
+
+void setFeedMotorTimeoutLocked(bool locked) {
+  feedMotorTimeoutLocked = locked;
+  if (locked) {
+    Serial.println("Feed motor timeout lock SET - motor locked until manually reset");
+  } else {
+    Serial.println("Feed motor timeout lock CLEARED - motor can now restart");
   }
 }
 

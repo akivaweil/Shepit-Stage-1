@@ -69,6 +69,11 @@ void disableFeedMotor();
 void enableCutMotor();
 void disableCutMotor();
 
+// Feed motor timeout lock functions
+void resetFeedMotorTimeoutLock();
+bool isFeedMotorTimeoutLocked();
+void setFeedMotorTimeoutLocked(bool locked);
+
 // Pneumatic clamp control functions
 void extendClamp();
 void retractClamp();

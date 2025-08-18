@@ -43,7 +43,7 @@ static const unsigned long FEED_MOTOR_STATE_CHANGE_DELAY = 100; // 100ms minimum
 // Feed motor timeout tracking for 2-second safety limit
 static unsigned long feedMotorStartTime = 0;
 static bool feedMotorTimeoutOccurred = false;
-static bool feedMotorTimeoutLocked = false; // Prevents restart after timeout until conditions change
+// Note: feedMotorTimeoutLocked is now a global variable in StateMachine_Functions.cpp
 
 // Clamp state tracking to prevent rapid state changes
 static bool clampShouldBeRetracted = false;
@@ -133,7 +133,7 @@ void updateIdleState() {
   // BUT NOT during cutting cycles (safety requirement)
   // AND NOT when locked due to timeout (prevents restart after timeout)
   // AND NOT when in reload state (prevents interference with reload operations)
-  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !feedMotorTimeoutLocked && (currentSystemState != STATE_RELOAD);
+  bool feedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
   
   // Unlock feed motor if conditions change (prevents infinite timeout loop)
   static bool previousRunCycleActive = false;
@@ -144,8 +144,8 @@ void updateIdleState() {
   // 2. Run cycle switch is turned OFF (allows user to cancel and reset)
   // 3. Run cycle switch is turned ON after being OFF (allows user to restart)
   if (runCycleActive != previousRunCycleActive || woodPresent != previousWoodPresent) {
-    if (feedMotorTimeoutLocked) {
-      feedMotorTimeoutLocked = false;
+    if (isFeedMotorTimeoutLocked()) {
+      resetFeedMotorTimeoutLock();
       feedMotorTimeoutOccurred = false;
       Serial.println("Feed motor UNLOCKED - conditions changed, timeout reset");
     }
@@ -154,7 +154,7 @@ void updateIdleState() {
   }
   
   // Additional unlock logic: Allow user to reset timeout lock by cycling run cycle switch
-  if (!runCycleActive && feedMotorTimeoutLocked) {
+  if (!runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is OFF and motor is locked - this allows user to cancel
     // The lock will be cleared when they turn the switch back ON
     static bool wasLockedWhenSwitchOff = false;
@@ -162,11 +162,11 @@ void updateIdleState() {
       wasLockedWhenSwitchOff = true;
       Serial.println("Feed motor timeout lock active - turn run cycle switch OFF then ON to reset");
     }
-  } else if (runCycleActive && feedMotorTimeoutLocked) {
+  } else if (runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is ON and motor was locked - clear the lock to allow restart
     static bool wasLockedWhenSwitchOff = false;
     if (wasLockedWhenSwitchOff) {
-      feedMotorTimeoutLocked = false;
+      resetFeedMotorTimeoutLock();
       feedMotorTimeoutOccurred = false;
       wasLockedWhenSwitchOff = false;
       Serial.println("Feed motor UNLOCKED - run cycle switch cycled, timeout reset");
@@ -298,7 +298,7 @@ void updateIdleState() {
     
     if (elapsedTime >= 2000) {
       feedMotorTimeoutOccurred = true;
-      feedMotorTimeoutLocked = true; // Lock feed motor from restarting after timeout
+      setFeedMotorTimeoutLocked(true); // Lock feed motor from restarting after timeout
       Serial.println("FEED MOTOR TIMEOUT - Motor running for 2+ seconds, stopping for safety");
       
       // Stop the feed motor immediately

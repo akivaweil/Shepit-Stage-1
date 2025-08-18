@@ -30,6 +30,13 @@ static const unsigned long RELOAD_TIMEOUT_MS = 10000; // 10 second timeout (incr
 static const int32_t RELOAD_STEPS = 5000; // 5000 steps in reverse direction
 
 void enterReloadState() {
+  // Reset feed motor timeout lock when entering this state
+  // This ensures the lock is cleared regardless of which state we came from
+  if (isFeedMotorTimeoutLocked()) {
+    Serial.println("RELOAD: Resetting feed motor timeout lock from previous state");
+    resetFeedMotorTimeoutLock();
+  }
+  
   // Reset all sequence variables
   reloadStartTime = 0;
   reloadMotorMoving = false;

@@ -72,6 +72,13 @@ void enterFeedToDistanceState() {
     return;
   }
   
+  // Reset feed motor timeout lock when entering this state
+  // This ensures the lock is cleared regardless of which state we came from
+  if (isFeedMotorTimeoutLocked()) {
+    Serial.println("FEED_TO_DISTANCE: Resetting feed motor timeout lock from previous state");
+    resetFeedMotorTimeoutLock();
+  }
+  
   // Ensure motors are enabled
   enableAllMotors();
   

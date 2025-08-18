@@ -45,6 +45,13 @@ static bool returnMotorStarted = false;
 static int32_t returnStartPosition = 0;
 
 void enterCuttingState() {
+  // Reset feed motor timeout lock when entering this state
+  // This ensures the lock is cleared regardless of which state we came from
+  if (isFeedMotorTimeoutLocked()) {
+    Serial.println("CUTTING: Resetting feed motor timeout lock from previous state");
+    resetFeedMotorTimeoutLock();
+  }
+  
   // Check only wood presence at the beginning
   if (!isWoodPresent()) {
     Serial.println("CUTTING: NO WOOD DETECTED - Canceling cutting cycle");
@@ -55,7 +62,7 @@ void enterCuttingState() {
   // Wood present - proceed with cutting cycle
   Serial.println("CUTTING: Wood detected - starting simple cutting cycle");
   
-  // Initialize distance sensor
+  // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
   cuttingDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   cuttingDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   

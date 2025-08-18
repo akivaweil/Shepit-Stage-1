@@ -11,6 +11,13 @@
 // It only handles serial commands and motor movements
 
 void enterManualState() {
+  // Reset feed motor timeout lock when entering this state
+  // This ensures the lock is cleared regardless of which state we came from
+  if (isFeedMotorTimeoutLocked()) {
+    Serial.println("MANUAL: Resetting feed motor timeout lock from previous state");
+    resetFeedMotorTimeoutLock();
+  }
+  
   // Motors are permanently enabled - no need to enable them
   
   // Set manual mode flag for serial command processing only
