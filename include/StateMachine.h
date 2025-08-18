@@ -153,6 +153,9 @@ extern Bounce2::Button redButton;
 void startContinuousFeed();
 void stopContinuousFeed();
 
+// Emergency stop function for feed operations
+void emergencyStopFeedOperation();
+
 // Reload mode state
 extern bool reloadModeActive;
 
