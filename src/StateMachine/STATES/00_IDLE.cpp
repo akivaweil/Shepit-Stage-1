@@ -93,6 +93,15 @@ void enterIdleState() {
 void updateIdleState() {
   // Sensors are now updated centrally in updateStateMachine()
   
+  // Debug: Verify sensor updates are working
+  static unsigned long lastSensorDebug = 0;
+  if (millis() - lastSensorDebug >= 2000) { // Log every 2 seconds
+    Serial.println("IDLE: Sensor status - Right switch: " + String(isRightSwitchActive() ? "ACTIVE" : "INACTIVE") + 
+                   ", Raw pin: " + String(digitalRead(RIGHT_SWITCH_PIN)) + 
+                   ", Bounce2 state: " + String(rightSwitch.read()));
+    lastSensorDebug = millis();
+  }
+  
   //! ************************************************************************
   //! FEED MOTOR CONTROL LOGIC - SIMPLIFIED AND FIXED
   //! ************************************************************************
@@ -371,6 +380,45 @@ void updateIdleState() {
   // Check for red button activation (active HIGH - button reads 1 when pressed)
   // Note: Edge detection is now handled by centralized sensor functions
   // The main control logic above handles button state changes automatically
+  
+  //! ************************************************************************
+  //! RELOAD SWITCH MONITORING - AUTOMATIC RELOAD STATE TRANSITION
+  //! ************************************************************************
+  // Check if reload switch (right switch) is activated to automatically start reload mode
+  bool reloadSwitchActive = isRightSwitchActive();
+  static bool reloadSwitchWasActive = false;
+  
+  // Debug logging for reload switch monitoring
+  static unsigned long lastReloadSwitchDebug = 0;
+  if (millis() - lastReloadSwitchDebug >= 1000) { // Log every second
+    Serial.println("IDLE: Monitoring reload switch - State: " + String(reloadSwitchActive ? "ACTIVE" : "INACTIVE") + 
+                   " (Raw pin value: " + String(digitalRead(RIGHT_SWITCH_PIN)) + ")");
+    lastReloadSwitchDebug = millis();
+  }
+  
+  // Detect rising edge of reload switch (switch turned ON)
+  if (reloadSwitchActive && !reloadSwitchWasActive) {
+    Serial.println("*** RELOAD SWITCH ACTIVATED - Starting reload mode automatically ***");
+    
+    // Stop feed motor if it's running before transitioning to reload
+    if (feedMotor && feedMotor->isRunning()) {
+      feedMotor->forceStop();
+      Serial.println("Feed motor: STOPPED (transitioning to reload mode)");
+    }
+    
+    // Extend clamp to secure wood before reload operation
+    if (!isClampRetracted()) {
+      extendClamp();
+      Serial.println("Clamp: EXTENDED (securing wood for reload operation)");
+    }
+    
+    // Transition to reload state
+    transitionToState(STATE_RELOAD);
+    return; // Exit early since we're transitioning to reload state
+  }
+  
+  // Update tracking variable
+  reloadSwitchWasActive = reloadSwitchActive;
   
   // Sleep mode functionality is handled by checkMotorTimeout() in main loop
 }

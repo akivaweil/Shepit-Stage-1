@@ -221,6 +221,14 @@ void processSerialCommand(String command) {
       Serial.println("Cannot start reload mode - system busy, current state: " + getCurrentStateName());
     }
   }
+  else if (command == "testreload") {
+    Serial.println("=== RELOAD SWITCH TEST ===");
+    Serial.println("Raw pin value: " + String(digitalRead(RIGHT_SWITCH_PIN)));
+    Serial.println("Bounce2 state: " + String(rightSwitch.read()));
+    Serial.println("isRightSwitchActive(): " + String(isRightSwitchActive()));
+    Serial.println("Current system state: " + getCurrentStateName());
+    Serial.println("========================");
+  }
   else if (command == "stopreload") {
     if (currentSystemState == STATE_RELOAD) {
       Serial.println("Stopping reload mode and returning to IDLE");
@@ -269,6 +277,7 @@ void processSerialCommand(String command) {
     Serial.println("  status - Show system status");
     Serial.println("  sequence - Start cutting sequence manually");
     Serial.println("  reload - Start reload mode (feed motor moves 5000 steps reverse)");
+    Serial.println("  testreload - Test reload switch status and values");
     Serial.println("  stopreload - Stop reload mode and return to IDLE");
     Serial.println("  stop/emergency - Emergency stop");
     Serial.println("  idle - Return to IDLE state");

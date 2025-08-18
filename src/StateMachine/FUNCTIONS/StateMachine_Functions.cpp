@@ -305,6 +305,13 @@ void updateStateMachine() {
   // Update all sensors first (debouncing)
   updateAllSensors();
   
+  // Debug: Log sensor update frequency
+  static unsigned long lastSensorUpdateDebug = 0;
+  if (millis() - lastSensorUpdateDebug >= 10000) { // Log every 10 seconds
+    Serial.println("Sensor update frequency check - updateStateMachine called every ~10ms");
+    lastSensorUpdateDebug = millis();
+  }
+  
   // Update the current state
   switch (currentSystemState) {
     case STATE_IDLE: updateIdleState(); break;
@@ -324,7 +331,9 @@ void initializeStateMachine() {
   manualMode = false;
   
   // Initialize all sensors first
+  Serial.println("Initializing sensors...");
   initializeAllSensors();
+  Serial.println("Sensor initialization complete");
   
   // Start in idle state
   currentSystemState = STATE_IDLE;

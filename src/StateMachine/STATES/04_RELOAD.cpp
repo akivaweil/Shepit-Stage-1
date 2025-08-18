@@ -98,7 +98,16 @@ void updateReloadState() {
   //! SAFETY CHECK: RIGHT SWITCH DEACTIVATION DETECTION
   //! ************************************************************************
   // Check if right switch is turned off during operation - return to idle immediately
-  if (digitalRead(RIGHT_SWITCH_PIN) != HIGH) {
+  bool rightSwitchActive = digitalRead(RIGHT_SWITCH_PIN) == HIGH;
+  
+  // Debug logging for switch state monitoring
+  static bool lastRightSwitchState = false;
+  if (rightSwitchActive != lastRightSwitchState) {
+    Serial.println("RELOAD: Right switch state changed to: " + String(rightSwitchActive ? "ACTIVE" : "INACTIVE"));
+    lastRightSwitchState = rightSwitchActive;
+  }
+  
+  if (!rightSwitchActive) {
     Serial.println("RELOAD: Right switch turned OFF - stopping operation");
     
     // Stop the feed motor immediately
