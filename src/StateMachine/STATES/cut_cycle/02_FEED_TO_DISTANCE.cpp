@@ -24,7 +24,7 @@ static bool timeoutOccurred = false;              // Timeout flag
 
 
 // Safety constants
-const unsigned long FEED_TIMEOUT_MS = 3000;       // 2-second safety limit
+// Feed timeout is now defined in Config.h as feedMotorTimeout
 
 //* ************************************************************************
 //* ************************ STATE ENTRY FUNCTION **************************
@@ -132,11 +132,11 @@ void updateFeedToDistanceState() {
   //! STEP 2: TIMEOUT PROTECTION
   //! ************************************************************************
   
-  // Check 2-second safety limit
+  // Check feed motor safety timeout limit
   if (feedMotorRunning && !timeoutOccurred) {
-    if (millis() - feedStartTime >= FEED_TIMEOUT_MS) {
+    if (millis() - feedStartTime >= feedMotorTimeout) {
       timeoutOccurred = true;
-      Serial.println("SAFETY TIMEOUT: Feed motor ran for 2 seconds without sensor trigger");
+      Serial.println("SAFETY TIMEOUT: Feed motor ran for " + String(feedMotorTimeout/1000) + " seconds without sensor trigger");
       emergencyStopFeedOperation();
       return;
     }

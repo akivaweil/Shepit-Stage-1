@@ -13,6 +13,9 @@ extern const float feedMotorSteps;
 // Wood distance sensor delay
 extern const unsigned long woodDistanceDelay;
 
+// Feed motor timeout
+extern const unsigned long feedMotorTimeout;
+
 // Cut motor parameters
 extern const float cutMotorSpeed;
 extern const float cutMotorAcceleration;
