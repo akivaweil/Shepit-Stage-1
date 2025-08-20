@@ -14,13 +14,13 @@ const float feedMotorSteps = 1000.0;           // Steps per move (for manual com
 const unsigned long woodDistanceDelay = 10;     // Milliseconds to wait after distance sensor triggered before cutting
 
 // Cut motor parameters
-const float cutMotorSpeed = 1500.0;            // Steps per second
+const float cutMotorSpeed = 750.0;            // Steps per second
 const float cutMotorAcceleration = 10000.0;    // Steps per second^2
-const float cutMotorSteps = 4000.0;            // Steps per move
+const float cutMotorSteps = 3500.0;            // Steps per move
 
 // Cut motor return parameters
 const float cutMotorReturnSpeed = 25000.0;      // Steps per second 
-const float cutMotorReturnAcceleration = 50000.0; // Steps per second^2
+const float cutMotorReturnAcceleration = 20000.0; // Steps per second^2
 
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************

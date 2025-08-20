@@ -16,19 +16,23 @@ Bounce2::Button runCycleSwitch = Bounce2::Button();
 Bounce2::Button rightSwitch = Bounce2::Button();
 Bounce2::Button redButton = Bounce2::Button();
 
+
+
 //* ************************************************************************
 //* *********************** SENSOR INITIALIZATION **************************
 //* ************************************************************************
 
 void initializeFeedDistanceSensor() {
-  // Initialize distance sensor with INPUT mode (active HIGH - HIGH when wood detected)
-  pinMode(WOOD_DISTANCE_SENSOR_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown
+  // Initialize distance sensor with INPUT mode (active LOW - LOW when wood detected)
+  pinMode(WOOD_DISTANCE_SENSOR_PIN, INPUT_PULLUP); // Set pin mode with internal pullup (active LOW)
   feedDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   feedDistanceSensor.interval(distanceSensorDebounceTime); // Distance sensor debounce
   
   // Minimal log
   Serial.println("Init: Distance sensor");
 }
+
+
 
 void initializeWoodPresenceSensor() {
   // Initialize wood presence sensor with proper debouncing
@@ -100,6 +104,8 @@ void updateFeedDistanceSensor() {
   feedDistanceSensor.update();
 }
 
+
+
 void updateWoodPresenceSensor() {
   woodPresenceSensor.update();
 }
@@ -132,8 +138,10 @@ void updateAllSensors() {
 //* ************************************************************************
 
 bool isFeedDistanceSensorTriggered() {
-  return feedDistanceSensor.read() == HIGH;
+  return feedDistanceSensor.read() == LOW;
 }
+
+
 
 bool isWoodPresenceSensorActive() {
   // Wood presence sensor is active LOW - returns true when wood is detected
@@ -164,6 +172,8 @@ void resetFeedDistanceSensor() {
   feedDistanceSensor.attach(WOOD_DISTANCE_SENSOR_PIN, INPUT);
   feedDistanceSensor.interval(distanceSensorDebounceTime);
 }
+
+
 
 void resetWoodPresenceSensor() {
   // Bounce2 doesn't have a reset method, just reinitialize

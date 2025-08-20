@@ -145,8 +145,8 @@ bool isWoodPresent() {
 //* ************************************************************************
 
 bool isWoodAtCorrectDistance() {
-  // Wood distance sensor is active HIGH - returns true when wood is at correct distance
-  // Use centralized sensor function for reliable detection
+  // Use the distance sensor (pin 10) for wood distance detection
+  // This sensor has debouncing for reliable detection
   return isFeedDistanceSensorTriggered();
 }
 

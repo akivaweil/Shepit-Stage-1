@@ -196,4 +196,10 @@ void enterReloadState();
 void updateReloadState();
 void exitReloadState();
 
+// Distance sensor functions
+void initializeFeedDistanceSensor();
+void updateFeedDistanceSensor();
+bool isFeedDistanceSensorTriggered();
+void resetFeedDistanceSensor();
+
 #endif // STATEMACHINE_H 
