@@ -21,13 +21,10 @@ static bool delayTimerStarted = false;            // Delay timer state flag
 static bool feedMotorRunning = false;             // Feed motor running state
 static bool safetyViolationDetected = false;      // Safety violation flag
 static bool timeoutOccurred = false;              // Timeout flag
-static unsigned long lastMotorStopAttempt = 0;    // Last motor stop attempt time
-static int motorStopAttempts = 0;                 // Number of motor stop attempts
+
 
 // Safety constants
-const unsigned long FEED_TIMEOUT_MS = 2000;       // 2-second safety limit
-const unsigned long MOTOR_STOP_RETRY_DELAY = 100; // 100ms between stop attempts
-const int MAX_MOTOR_STOP_ATTEMPTS = 3;           // Maximum stop attempts
+const unsigned long FEED_TIMEOUT_MS = 3000;       // 2-second safety limit
 
 //* ************************************************************************
 //* ************************ STATE ENTRY FUNCTION **************************
@@ -46,8 +43,6 @@ void enterFeedToDistanceState() {
   feedMotorRunning = false;
   safetyViolationDetected = false;
   timeoutOccurred = false;
-  lastMotorStopAttempt = 0;
-  motorStopAttempts = 0;
   
   // Clear feed motor timeout locks from previous states
   resetFeedMotorTimeoutLock();
@@ -211,20 +206,16 @@ void updateFeedToDistanceState() {
   
   // Verify motors actually stopped if stop was commanded
   if (!feedMotorRunning && feedMotor && feedMotor->isRunning()) {
-    // Motor is still running despite stop command
-    if (millis() - lastMotorStopAttempt >= MOTOR_STOP_RETRY_DELAY) {
-      motorStopAttempts++;
-      lastMotorStopAttempt = millis();
-      
-      if (motorStopAttempts <= MAX_MOTOR_STOP_ATTEMPTS) {
-        Serial.println("Motor stop retry " + String(motorStopAttempts) + "/" + String(MAX_MOTOR_STOP_ATTEMPTS));
-        feedMotor->forceStop();
-      } else {
-        Serial.println("CRITICAL: Feed motor failed to stop after " + String(MAX_MOTOR_STOP_ATTEMPTS) + " attempts");
-        safetyViolationDetected = true;
-        emergencyStopFeedOperation();
-        return;
-      }
+    // Motor is still running despite stop command - use force stop
+    Serial.println("WARNING: Feed motor still running - using force stop");
+    feedMotor->forceStop();
+    
+    // If still running after force stop, this is a critical failure
+    if (feedMotor->isRunning()) {
+      Serial.println("CRITICAL: Feed motor failed to stop even with force stop");
+      safetyViolationDetected = true;
+      emergencyStopFeedOperation();
+      return;
     }
   }
 }
@@ -270,8 +261,6 @@ void exitFeedToDistanceState() {
   feedMotorRunning = false;
   safetyViolationDetected = false;
   timeoutOccurred = false;
-  lastMotorStopAttempt = 0;
-  motorStopAttempts = 0;
   
   // Clear sensor trigger flags
   resetFeedDistanceSensor();
