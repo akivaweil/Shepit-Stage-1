@@ -62,6 +62,10 @@ void enterIdleState() {
   // Reset feed motor timeout tracking
   feedMotorTimeoutOccurred = false;
   
+  // CRITICAL FIX: Reset feed motor timeout lock when entering IDLE state
+  // This ensures the machine can restart feed operations after entering IDLE
+  resetFeedMotorTimeoutLock();
+  
   // Reset clamp control state
   clampShouldBeRetracted = false;
   clampWasRetracted = false;
@@ -454,6 +458,10 @@ void resetIdleFeedMotorControl() {
   
   // Reset feed motor timeout tracking
   feedMotorTimeoutOccurred = false;
+  
+  // CRITICAL FIX: Reset feed motor timeout lock when resetting feed motor control
+  // This ensures the machine can restart feed operations after manual reset
+  resetFeedMotorTimeoutLock();
   
   // Reset clamp control state
   clampShouldBeRetracted = false;
