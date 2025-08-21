@@ -23,13 +23,13 @@ const unsigned long motorTimeoutMs = 2000;      // 2 seconds for sleep mode
 const unsigned long motorEnableDelayMs = 250;   // 250ms motor enable delay
 
 // Cut motor parameters
-const float cutMotorSpeed = 750.0;            // Steps per second
-const float cutMotorAcceleration = 10000.0;    // Steps per second^2
+const float cutMotorSpeed = 850.0;            // Steps per second
+const float cutMotorAcceleration = 30000.0;    // Steps per second^2
 const float cutMotorSteps = 3500.0;            // Steps per move
 
 // Cut motor return parameters
 const float cutMotorReturnSpeed = 30000.0;      // Steps per second 
-const float cutMotorReturnAcceleration = 30000.0; // Steps per second^2
+const float cutMotorReturnAcceleration = 35000.0; // Steps per second^2
 
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************

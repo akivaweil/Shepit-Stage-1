@@ -209,6 +209,8 @@ void updateIdleState() {
       // CRITICAL FIX: Reset state tracking when cycle switch turns OFF
       // This ensures clean state when switch is turned back ON
       feedMotorShouldRun = false;
+      // CRITICAL FIX: Reset the was-running flag to ensure motor can restart
+      feedMotorWasRunning = false;
     }
     lastRunCycleState = runCycleActive;
   }
@@ -257,10 +259,24 @@ void updateIdleState() {
             Serial.println("Feed motor: Motors enabled");
           }
           
+          // CRITICAL FIX: Brief delay to ensure motor is ready after previous stop
+          if (feedMotorWasRunning) {
+            delay(50); // 50ms delay to ensure motor is ready for new commands
+          }
+          
           // Configure and start feed motor
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
           feedMotor->runForward();
+          
+          // CRITICAL FIX: Verify motor actually started
+          delay(10); // Brief delay to let motor start
+          if (!feedMotor->isRunning()) {
+            // Motor failed to start - reset state to allow retry
+            Serial.println("Feed motor: FAILED TO START - resetting state for retry");
+            feedMotorWasRunning = false; // Reset to allow retry
+            return; // Exit early to prevent further processing
+          }
           
           // Start 2-second timeout tracking for feed motor safety
           // BUT NOT when in reload state (reload state has its own control logic)
@@ -310,6 +326,15 @@ void updateIdleState() {
       Serial.println("  currentSystemState: " + String(currentSystemState));
       Serial.println("  feedMotorShouldRun: " + String(feedMotorShouldRun));
       Serial.println("  feedMotorWasRunning: " + String(feedMotorWasRunning));
+      
+      // CRITICAL FIX: If motor should be running but isn't, reset state to allow retry
+      // This prevents the system from getting stuck in a loop
+      static unsigned long lastMotorRetryTime = 0;
+      if (millis() - lastMotorRetryTime >= 1000) { // Retry every 1 second
+        lastMotorRetryTime = millis();
+        Serial.println("Feed motor: RESETTING STATE TO ALLOW RETRY");
+        feedMotorWasRunning = false; // Reset to force motor start attempt
+      }
     }
   }
   
@@ -327,6 +352,8 @@ void updateIdleState() {
       feedMotorTimeoutOccurred = false;
       // CRITICAL FIX: Update state tracking when emergency stopping
       feedMotorShouldRun = false;
+      // CRITICAL FIX: Reset all feed motor state to ensure clean restart
+      lastFeedMotorStateChange = 0;
       return; // Exit early to prevent further processing
     }
     
@@ -338,6 +365,8 @@ void updateIdleState() {
       feedMotorTimeoutOccurred = false;
       // CRITICAL FIX: Update state tracking when emergency stopping
       feedMotorShouldRun = false;
+      // CRITICAL FIX: Reset all feed motor state to ensure clean restart
+      lastFeedMotorStateChange = 0;
       return; // Exit early to prevent further processing
     }
   }
