@@ -372,18 +372,18 @@ void updateIdleState() {
   }
   
   //! ************************************************************************
-  //! FEED MOTOR TIMEOUT CHECK (2-SECOND SAFETY LIMIT)
+  //! FEED MOTOR TIMEOUT CHECK (CONFIGURABLE SAFETY LIMIT)
   //! ************************************************************************
-  // Check if feed motor has been running for more than 2 seconds without distance sensor trigger
+  // Check if feed motor has been running for more than the configured timeout without distance sensor trigger
   // BUT NOT when in reload state (reload state has its own control logic)
   if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && (currentSystemState != STATE_RELOAD)) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedMotorStartTime;
     
-    if (elapsedTime >= 2000) {
+    if (elapsedTime >= feedMotorTimeout) {
       feedMotorTimeoutOccurred = true;
       setFeedMotorTimeoutLocked(true); // Lock feed motor from restarting after timeout
-      Serial.println("Feed motor: SAFETY TIMEOUT");
+      Serial.println("Feed motor: SAFETY TIMEOUT (" + String(feedMotorTimeout/1000) + "s)");
       
       // Stop the feed motor immediately
       feedMotor->forceStop();

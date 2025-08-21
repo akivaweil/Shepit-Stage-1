@@ -19,9 +19,11 @@ static unsigned long sensorTriggerTime = 0;       // When distance sensor trigge
 static bool distanceSensorTriggered = false;      // Distance sensor state flag
 static bool delayTimerStarted = false;            // Delay timer state flag
 static bool feedMotorRunning = false;             // Feed motor running state
-static bool safetyViolationDetected = false;      // Safety violation flag
+static bool feedToDistanceExitCondition = false;   // Exit condition flag for this state
 static bool timeoutOccurred = false;              // Timeout flag
 static bool woodWasPresentAtStart = false;        // Track if wood was present when feeding started
+static bool waitingForWoodReset = false;          // Waiting for wood sensor to be deactivated then reactivated
+static bool woodSensorDeactivated = false;        // Track if wood sensor was deactivated after reload
 
 
 // Safety constants
@@ -45,9 +47,11 @@ void enterFeedToDistanceState() {
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
-  safetyViolationDetected = false;
+  feedToDistanceExitCondition = false;
   timeoutOccurred = false;
   woodWasPresentAtStart = false;
+  waitingForWoodReset = false;
+  woodSensorDeactivated = false;
   
   // Clear feed motor timeout locks from previous states
   resetFeedMotorTimeoutLock();
@@ -61,15 +65,15 @@ void enterFeedToDistanceState() {
   
   // Verify run cycle switch is still active
   if (!isRunCycleSwitchActive()) {
-    safetyViolationDetected = true;
-    Serial.println("SAFETY VIOLATION: Run cycle switch deactivated during entry");
+    feedToDistanceExitCondition = true;
+    Serial.println("EXIT CONDITION: Run cycle switch deactivated during entry");
     return;
   }
   
   // Check if wood is present before starting feed operation
   if (!isWoodPresent()) {
-    safetyViolationDetected = true;
-    Serial.println("SAFETY VIOLATION: No wood detected before feed operation");
+    feedToDistanceExitCondition = true;
+    Serial.println("EXIT CONDITION: No wood detected before feed operation");
     return;
   }
   
@@ -95,8 +99,8 @@ void enterFeedToDistanceState() {
   
   // Validate feed motor speed and acceleration values
   if (feedMotorSpeed <= 0 || feedMotorAcceleration <= 0) {
-    safetyViolationDetected = true;
-    Serial.println("SAFETY VIOLATION: Invalid motor parameters");
+    feedToDistanceExitCondition = true;
+    Serial.println("EXIT CONDITION: Invalid motor parameters");
     return;
   }
   
@@ -115,15 +119,15 @@ void enterFeedToDistanceState() {
     
     // Verify motor is actually running
     if (!feedMotor->isRunning()) {
-      safetyViolationDetected = true;
-      Serial.println("SAFETY VIOLATION: Feed motor failed to start");
+      feedToDistanceExitCondition = true;
+      Serial.println("EXIT CONDITION: Feed motor failed to start");
       return;
     }
     
     Serial.println("Feed motor started - moving forward at " + String(feedMotorSpeed) + " Hz");
   } else {
-    safetyViolationDetected = true;
-    Serial.println("SAFETY VIOLATION: Feed motor object not available");
+    feedToDistanceExitCondition = true;
+    Serial.println("EXIT CONDITION: Feed motor object not available");
     return;
   }
 }
@@ -183,20 +187,61 @@ void updateFeedToDistanceState() {
         
         // Extend clamp to secure wood in new position
         extendClamp();
-        Serial.println("Automatic reload movement complete - returning to IDLE");
+        Serial.println("Automatic reload movement complete - waiting for wood sensor reset");
+        
+        // Set flag to wait for wood sensor to be deactivated then reactivated
+        waitingForWoodReset = true;
+        woodSensorDeactivated = false;
       }
       
-      // Return to IDLE state after reload
-      transitionToState(STATE_IDLE);
+      // Stay in current state to wait for wood sensor reset
       return;
     }
+  }
+  
+  //! ************************************************************************
+  //! STEP 1.6: WOOD SENSOR RESET MONITORING
+  //! ************************************************************************
+  
+  // Monitor for wood sensor reset after automatic reload
+  if (waitingForWoodReset) {
+    // First, wait for wood sensor to be deactivated (wood removed)
+    if (!woodSensorDeactivated) {
+      if (!isWoodPresent()) {
+        woodSensorDeactivated = true;
+        Serial.println("Wood sensor deactivated - please place wood back to continue");
+      }
+    } else {
+      // Wood sensor was deactivated, now wait for it to be reactivated (wood placed back)
+      if (isWoodPresent()) {
+        // Wood sensor reactivated - reset flags and allow feeding to continue
+        waitingForWoodReset = false;
+        woodSensorDeactivated = false;
+        woodWasPresentAtStart = true;
+        
+        Serial.println("Wood sensor reactivated - resuming feed operation");
+        
+        // Restart feed motor
+        if (feedMotor) {
+          feedMotor->setSpeedInHz(feedMotorSpeed);
+          feedMotor->setAcceleration(feedMotorAcceleration);
+          feedMotor->runForward();
+          feedStartTime = millis();
+          feedMotorRunning = true;
+          Serial.println("Feed motor restarted after wood sensor reset");
+        }
+      }
+    }
+    
+    // While waiting for wood sensor reset, don't proceed with other operations
+    return;
   }
   
   //! ************************************************************************
   //! STEP 2: TIMEOUT PROTECTION
   //! ************************************************************************
   
-  // Check feed motor safety timeout limit
+  // Check feed motor safety timeout limit using configurable timeout
   if (feedMotorRunning && !timeoutOccurred) {
     if (millis() - feedStartTime >= feedMotorTimeout) {
       timeoutOccurred = true;
@@ -243,7 +288,7 @@ void updateFeedToDistanceState() {
   //! ************************************************************************
   
   // Process delay completion
-  if (delayTimerStarted && !safetyViolationDetected && !timeoutOccurred) {
+  if (delayTimerStarted && !feedToDistanceExitCondition && !timeoutOccurred) {
     if (millis() - sensorTriggerTime >= woodDistanceDelay) {
       // Check if both conditions are met for cutting cycle
       if (isRunCycleSwitchActive() && isWoodPresent()) {
@@ -253,11 +298,11 @@ void updateFeedToDistanceState() {
       } else {
         // Conditions failed - return to IDLE
         if (!isRunCycleSwitchActive()) {
-          Serial.println("SAFETY VIOLATION: Run cycle switch deactivated during delay");
+          Serial.println("EXIT CONDITION: Run cycle switch deactivated during delay");
         } else {
-          Serial.println("SAFETY VIOLATION: Wood no longer present during delay");
+          Serial.println("EXIT CONDITION: Wood no longer present during delay");
         }
-        safetyViolationDetected = true;
+        feedToDistanceExitCondition = true;
         emergencyStopFeedOperation();
         return;
       }
@@ -277,7 +322,7 @@ void updateFeedToDistanceState() {
     // If still running after force stop, this is a critical failure
     if (feedMotor->isRunning()) {
       Serial.println("CRITICAL: Feed motor failed to stop even with force stop");
-      safetyViolationDetected = true;
+      feedToDistanceExitCondition = true;
       emergencyStopFeedOperation();
       return;
     }
@@ -323,9 +368,11 @@ void exitFeedToDistanceState() {
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
-  safetyViolationDetected = false;
+  feedToDistanceExitCondition = false;
   timeoutOccurred = false;
   woodWasPresentAtStart = false;
+  waitingForWoodReset = false;
+  woodSensorDeactivated = false;
   
   // Clear sensor trigger flags
   resetFeedDistanceSensor();
