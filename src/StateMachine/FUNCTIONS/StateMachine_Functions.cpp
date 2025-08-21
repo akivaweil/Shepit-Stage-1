@@ -14,8 +14,7 @@ SystemState previousSystemState = STATE_IDLE;
 unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
 bool manualMode = false;
-const unsigned long MOTOR_TIMEOUT_MS = 3000; // 3 seconds for sleep mode
-const unsigned long MOTOR_ENABLE_DELAY_MS = 750; // 750ms motor enable delay
+// Motor timeout and enable delay moved to Config.h
 
 // SIMPLIFIED: Only essential motor enable tracking
 unsigned long motorEnableStartTime = 0;
@@ -28,6 +27,22 @@ const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent acc
 
 // Feed motor timeout lock - prevents restart after timeout until manually reset
 bool feedMotorTimeoutLocked = false;
+
+//* ************************************************************************
+//* *********************** STARTUP SAFETY FUNCTIONS **********************
+//* ************************************************************************
+// Startup safety: prevents automatic cycle start if run cycle switch is on at startup
+// This requires the user to turn the switch off and back on to reset the safety
+bool startupSafetyResetRequired = false;
+
+void resetStartupSafety() {
+  startupSafetyResetRequired = false;
+  Serial.println("Startup safety RESET - system can now start cycles");
+}
+
+bool isStartupSafetyResetRequired() {
+  return startupSafetyResetRequired;
+}
 
 //* ************************************************************************
 //* *********************** MOTOR ENABLE FUNCTIONS ************************
@@ -59,7 +74,7 @@ void enableAllMotorsWithDelay() {
 
 bool isMotorEnableDelayComplete() {
   if (waitingForMotorEnable) {
-    if (millis() - motorEnableStartTime >= MOTOR_ENABLE_DELAY_MS) {
+    if (millis() - motorEnableStartTime >= motorEnableDelayMs) {
       waitingForMotorEnable = false;
       return true;
     }
@@ -86,7 +101,7 @@ void checkMotorTimeout() {
     bool feedMotorRunning = (feedMotor && feedMotor->isRunning());
     
     // Only disable motors if they're enabled AND feed motor is not running AND timeout exceeded
-    if (motorsEnabled && !feedMotorRunning && (millis() - lastActivityTime >= MOTOR_TIMEOUT_MS)) {
+    if (motorsEnabled && !feedMotorRunning && (millis() - lastActivityTime >= motorTimeoutMs)) {
       disableAllMotorsAfterDelay();
     }
   }
@@ -330,6 +345,21 @@ void initializeStateMachine() {
   initializeAllSensors();
   Serial.println("Sensor initialization complete");
   
+  //! ************************************************************************
+  //! STARTUP SAFETY CHECK: Check if run cycle switch is already ON at startup
+  //! ************************************************************************
+  // If the run cycle switch is ON when the machine starts, require a reset
+  // This prevents automatic cycle start without user intervention
+  if (isRunCycleSwitchActive()) {
+    startupSafetyResetRequired = true;
+    Serial.println("⚠️  STARTUP SAFETY: Run cycle switch is ON at startup");
+    Serial.println("⚠️  STARTUP SAFETY: Turn switch OFF then ON to reset safety");
+    Serial.println("⚠️  STARTUP SAFETY: No automatic cycles until reset");
+  } else {
+    startupSafetyResetRequired = false;
+    Serial.println("✓ STARTUP SAFETY: Run cycle switch is OFF - system ready");
+  }
+  
   // Start in idle state
   currentSystemState = STATE_IDLE;
   previousSystemState = STATE_IDLE;
@@ -378,6 +408,12 @@ void resetAllStateMachineFlags() {
   if (feedMotorTimeoutLocked) {
     feedMotorTimeoutLocked = false;
     Serial.println("Feed motor timeout lock RESET");
+  }
+  
+  // Reset startup safety flag
+  if (startupSafetyResetRequired) {
+    startupSafetyResetRequired = false;
+    Serial.println("Startup safety flag RESET");
   }
   
   // Reset motor enable tracking

@@ -36,7 +36,7 @@ static bool feedMotorTimeoutOccurred = false;
 static bool clampShouldBeRetracted = false;
 static bool clampWasRetracted = false;
 static unsigned long lastClampStateChange = 0;
-static const unsigned long CLAMP_STATE_CHANGE_DELAY = 200; // 200ms minimum delay between clamp state changes
+static const unsigned long CLAMP_STATE_CHANGE_DELAY = 100; // 200ms minimum delay between clamp state changes
 
 void enterIdleState() {
   // Reset all state machine flags when entering IDLE state
@@ -129,17 +129,17 @@ void updateIdleState() {
   }
   
   // CRITICAL FIX: Allow user to reset timeout lock by cycling run cycle switch
+  static bool wasLockedWhenSwitchOff = false;
+  
   if (!runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is OFF and motor is locked - this allows user to cancel
     // The lock will be cleared when they turn the switch back ON
-    static bool wasLockedWhenSwitchOff = false;
     if (!wasLockedWhenSwitchOff) {
       wasLockedWhenSwitchOff = true;
       Serial.println("Feed motor: LOCKED");
     }
   } else if (runCycleActive && isFeedMotorTimeoutLocked()) {
     // Run cycle switch is ON and motor was locked - clear the lock to allow restart
-    static bool wasLockedWhenSwitchOff = false;
     if (wasLockedWhenSwitchOff) {
       resetFeedMotorTimeoutLock();
       feedMotorTimeoutOccurred = false;
@@ -148,7 +148,6 @@ void updateIdleState() {
     }
   } else {
     // Reset the tracking variable when switch is ON and not locked
-    static bool wasLockedWhenSwitchOff = false;
     wasLockedWhenSwitchOff = false;
   }
   
@@ -166,17 +165,34 @@ void updateIdleState() {
     }
   }
   
+  // CRITICAL FIX: Force motor state update when conditions change
+  // This ensures the motor responds immediately to condition changes
+  static bool lastConditions = false;
+  bool currentConditions = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
+  
+  if (currentConditions != lastConditions) {
+    // Conditions changed - force motor state update
+    feedMotorWasRunning = !currentConditions;
+    lastConditions = currentConditions;
+    Serial.println("Feed motor: Conditions changed, forcing state update");
+  }
+  
   // CRITICAL FIX: Additional check for cycle switch state changes
   // This ensures that when the cycle switch is toggled, the feed motor responds immediately
   static bool lastRunCycleState = false;
   if (runCycleActive != lastRunCycleState) {
     if (runCycleActive) {
       Serial.println("Cycle switch: ON");
+      // CRITICAL FIX: Clear timeout lock immediately when cycle switch turns ON
+      if (isFeedMotorTimeoutLocked()) {
+        resetFeedMotorTimeoutLock();
+        feedMotorTimeoutOccurred = false;
+        wasLockedWhenSwitchOff = false;
+        Serial.println("Feed motor UNLOCKED - cycle switch turned ON, timeout reset");
+      }
       // CRITICAL FIX: Reset the was-running flag when cycle switch turns ON
       // This forces the motor to start if conditions are met
       feedMotorWasRunning = false;
-      // CRITICAL FIX: Also reset the should-run state to force re-evaluation
-      feedMotorShouldRun = false;
       // No verbose logging
     } else {
       Serial.println("Cycle switch: OFF");
@@ -234,7 +250,7 @@ void updateIdleState() {
           // Ensure motors are enabled (wake from sleep mode if needed)
           if (!motorsEnabled) {
             enableAllMotors();
-            // No verbose logging
+            Serial.println("Feed motor: Motors enabled");
           }
           
           // Configure and start feed motor
@@ -253,6 +269,8 @@ void updateIdleState() {
           resetMotorTimeout();
           
           Serial.println("Feed motor: STARTED");
+        } else {
+          Serial.println("Feed motor: Already running or motor object not available");
         }
       } else {
         // Feed motor should NOT be running
@@ -264,11 +282,11 @@ void updateIdleState() {
           feedMotorTimeoutOccurred = false;
           
           if (inCuttingCycle) {
-                  Serial.println("Feed motor: STOPPED");
-      } else if (!runCycleActive) {
-        Serial.println("Feed motor: STOPPED");
-      } else if (!woodPresent) {
-        Serial.println("Feed motor: STOPPED");
+            Serial.println("Feed motor: STOPPED");
+          } else if (!runCycleActive) {
+            Serial.println("Feed motor: STOPPED");
+          } else if (!woodPresent) {
+            Serial.println("Feed motor: STOPPED");
           }
         }
       }
@@ -278,6 +296,17 @@ void updateIdleState() {
     }
   } else {
     // State variables are the same - no action needed
+    // Debug: Log when motor should be running but isn't
+    if (feedMotorShouldRun && feedMotor && !feedMotor->isRunning()) {
+      Serial.println("Feed motor: Should be running but isn't - checking conditions");
+      Serial.println("  runCycleActive: " + String(runCycleActive));
+      Serial.println("  woodPresent: " + String(woodPresent));
+      Serial.println("  inCuttingCycle: " + String(inCuttingCycle));
+      Serial.println("  isFeedMotorTimeoutLocked: " + String(isFeedMotorTimeoutLocked()));
+      Serial.println("  currentSystemState: " + String(currentSystemState));
+      Serial.println("  feedMotorShouldRun: " + String(feedMotorShouldRun));
+      Serial.println("  feedMotorWasRunning: " + String(feedMotorWasRunning));
+    }
   }
   
   //! ************************************************************************

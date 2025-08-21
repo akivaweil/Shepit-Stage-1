@@ -16,6 +16,12 @@ extern const unsigned long woodDistanceDelay;
 // Feed motor timeout
 extern const unsigned long feedMotorTimeout;
 
+// Motor sleep timeout
+extern const unsigned long motorTimeoutMs;
+
+// Motor enable delay
+extern const unsigned long motorEnableDelayMs;
+
 // Cut motor parameters
 extern const float cutMotorSpeed;
 extern const float cutMotorAcceleration;

@@ -37,8 +37,7 @@ extern SystemState previousSystemState;
 extern unsigned long lastActivityTime;
 extern bool motorsEnabled;
 extern bool manualMode;
-extern const unsigned long MOTOR_TIMEOUT_MS;
-extern const unsigned long MOTOR_ENABLE_DELAY_MS;
+// Motor timeout and enable delay constants moved to Config.h
 
 // Motor enable delay tracking
 extern unsigned long motorEnableStartTime;
@@ -48,6 +47,9 @@ extern bool waitingForMotorEnable;
 extern unsigned long cycleStartTime;
 extern bool emergencyStopRequested;
 extern const unsigned long EMERGENCY_STOP_DELAY_MS;
+
+// Startup safety: prevents automatic cycle start if run cycle switch is on at startup
+extern bool startupSafetyResetRequired;
 
 // Motor objects
 extern FastAccelStepper *feedMotor;
@@ -85,6 +87,10 @@ void disableCutMotor();
 void resetFeedMotorTimeoutLock();
 bool isFeedMotorTimeoutLocked();
 void setFeedMotorTimeoutLocked(bool locked);
+
+// Startup safety functions
+void resetStartupSafety();
+bool isStartupSafetyResetRequired();
 
 // State machine reset functions
 void resetAllStateMachineFlags();

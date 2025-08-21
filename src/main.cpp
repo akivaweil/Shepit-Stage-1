@@ -174,7 +174,7 @@ void processSerialCommand(String command) {
     Serial.println("Wood at correct distance: " + String(isWoodAtCorrectDistance() ? "YES" : "NO"));
     Serial.println("Waiting for motor enable: " + String(waitingForMotorEnable));
     if (waitingForMotorEnable) {
-      Serial.println("Motor enable delay remaining: " + String(MOTOR_ENABLE_DELAY_MS - (millis() - motorEnableStartTime)) + "ms");
+      Serial.println("Motor enable delay remaining: " + String(motorEnableDelayMs - (millis() - motorEnableStartTime)) + "ms");
     }
     Serial.println("Feed motor running: " + String(feedMotor ? feedMotor->isRunning() : false));
     Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
