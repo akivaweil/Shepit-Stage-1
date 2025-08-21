@@ -21,10 +21,14 @@ static bool delayTimerStarted = false;            // Delay timer state flag
 static bool feedMotorRunning = false;             // Feed motor running state
 static bool safetyViolationDetected = false;      // Safety violation flag
 static bool timeoutOccurred = false;              // Timeout flag
+static bool woodWasPresentAtStart = false;        // Track if wood was present when feeding started
 
 
 // Safety constants
 // Feed timeout is now defined in Config.h as feedMotorTimeout
+
+// Automatic reload constants
+static const int32_t AUTOMATIC_RELOAD_STEPS = 5000; // Steps to move backward when wood is lost
 
 //* ************************************************************************
 //* ************************ STATE ENTRY FUNCTION **************************
@@ -43,6 +47,7 @@ void enterFeedToDistanceState() {
   feedMotorRunning = false;
   safetyViolationDetected = false;
   timeoutOccurred = false;
+  woodWasPresentAtStart = false;
   
   // Clear feed motor timeout locks from previous states
   resetFeedMotorTimeoutLock();
@@ -60,6 +65,17 @@ void enterFeedToDistanceState() {
     Serial.println("SAFETY VIOLATION: Run cycle switch deactivated during entry");
     return;
   }
+  
+  // Check if wood is present before starting feed operation
+  if (!isWoodPresent()) {
+    safetyViolationDetected = true;
+    Serial.println("SAFETY VIOLATION: No wood detected before feed operation");
+    return;
+  }
+  
+  // Record that wood was present at start
+  woodWasPresentAtStart = true;
+  Serial.println("Wood presence confirmed - starting feed operation");
   
   // Ensure all motors are enabled
   if (!motorsEnabled) {
@@ -126,6 +142,54 @@ void updateFeedToDistanceState() {
     Serial.println("SAFETY VIOLATION: Run cycle switch deactivated - stopping immediately");
     emergencyStopFeedOperation();
     return;
+  }
+  
+  //! ************************************************************************
+  //! STEP 1.5: WOOD PRESENCE MONITORING DURING FEEDING
+  //! ************************************************************************
+  
+  // Monitor wood presence during feeding operation
+  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered) {
+    if (!isWoodPresent()) {
+      Serial.println("WOOD LOST DURING FEEDING: Wood no longer detected - executing automatic reload movement");
+      
+      // Stop the feed motor immediately
+      if (feedMotor && feedMotor->isRunning()) {
+        feedMotor->forceStop();
+        feedMotorRunning = false;
+        Serial.println("Feed motor stopped due to wood loss");
+      }
+      
+      // Extend clamp to secure any remaining wood
+      extendClamp();
+      Serial.println("Clamp extended to secure remaining wood");
+      
+      // Execute automatic reload movement (5000 steps in reverse)
+      if (feedMotor) {
+        Serial.println("Executing automatic reload movement - " + String(AUTOMATIC_RELOAD_STEPS) + " steps backward");
+        
+        // Retract clamp for feed motor movement
+        retractClamp();
+        
+        // Start reload movement
+        feedMotor->setSpeedInHz(feedMotorSpeed);
+        feedMotor->setAcceleration(feedMotorAcceleration);
+        feedMotor->move(-AUTOMATIC_RELOAD_STEPS); // Move backward when wood is lost
+        
+        // Wait for movement to complete
+        while (feedMotor->isRunning()) {
+          delay(10); // Small delay to prevent blocking
+        }
+        
+        // Extend clamp to secure wood in new position
+        extendClamp();
+        Serial.println("Automatic reload movement complete - returning to IDLE");
+      }
+      
+      // Return to IDLE state after reload
+      transitionToState(STATE_IDLE);
+      return;
+    }
   }
   
   //! ************************************************************************
@@ -261,6 +325,7 @@ void exitFeedToDistanceState() {
   feedMotorRunning = false;
   safetyViolationDetected = false;
   timeoutOccurred = false;
+  woodWasPresentAtStart = false;
   
   // Clear sensor trigger flags
   resetFeedDistanceSensor();
