@@ -13,7 +13,7 @@
 Bounce2::Button feedDistanceSensor = Bounce2::Button();
 Bounce2::Button woodPresenceSensor = Bounce2::Button();
 Bounce2::Button runCycleSwitch = Bounce2::Button();
-Bounce2::Button rightSwitch = Bounce2::Button();
+Bounce2::Button reloadSwitch = Bounce2::Button();
 Bounce2::Button redButton = Bounce2::Button();
 
 
@@ -54,11 +54,11 @@ void initializeRunCycleSwitch() {
   Serial.println("Init: Run cycle switch");
 }
 
-void initializeRightSwitch() {
-  // Initialize right switch with proper debouncing
+void initializeReloadSwitch() {
+  // Initialize reload switch with proper debouncing
   pinMode(RELOAD_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown
-  rightSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
-  rightSwitch.interval(sensorDebounceTime); // Standard sensor debounce
+  reloadSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
+  reloadSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
   // Minimal log
   Serial.println("Init: Reload switch");
@@ -87,7 +87,7 @@ void initializeAllSensors() {
   initializeRunCycleSwitch();
   
   
-  initializeRightSwitch();
+  initializeReloadSwitch();
   
   
   initializeRedButton();
@@ -114,8 +114,8 @@ void updateRunCycleSwitch() {
   runCycleSwitch.update();
 }
 
-void updateRightSwitch() {
-  rightSwitch.update();
+void updateReloadSwitch() {
+  reloadSwitch.update();
   
   // No periodic debug here to reduce noise
 }
@@ -129,7 +129,7 @@ void updateAllSensors() {
   updateFeedDistanceSensor();
   updateWoodPresenceSensor();
   updateRunCycleSwitch();
-  updateRightSwitch();
+  updateReloadSwitch();
   updateRedButton();
 }
 
@@ -148,8 +148,8 @@ bool isWoodPresenceSensorActive() {
   return woodPresenceSensor.read() == LOW;
 }
 
-bool isRightSwitchActive() {
-  bool switchState = rightSwitch.read() == HIGH;
+bool isReloadSwitchActive() {
+  bool switchState = reloadSwitch.read() == HIGH;
   
   return switchState;
 }
@@ -187,10 +187,10 @@ void resetRunCycleSwitch() {
   runCycleSwitch.interval(sensorDebounceTime);
 }
 
-void resetRightSwitch() {
+void resetReloadSwitch() {
   // Bounce2 doesn't have a reset method, just reinitialize
-  rightSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
-  rightSwitch.interval(sensorDebounceTime);
+  reloadSwitch.attach(RELOAD_SWITCH_PIN, INPUT);
+  reloadSwitch.interval(sensorDebounceTime);
 }
 
 void resetRedButton() {
@@ -204,6 +204,6 @@ void resetAllSensors() {
   resetFeedDistanceSensor();
   resetWoodPresenceSensor();
   resetRunCycleSwitch();
-  resetRightSwitch();
+  resetReloadSwitch();
   resetRedButton();
 }

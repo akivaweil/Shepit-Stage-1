@@ -13,7 +13,7 @@ SystemState currentSystemState = STATE_IDLE;
 SystemState previousSystemState = STATE_IDLE;
 unsigned long lastActivityTime = 0;
 bool motorsEnabled = false;
-bool manualMode = false;
+
 // Motor timeout and enable delay moved to Config.h
 
 // SIMPLIFIED: Only essential motor enable tracking
@@ -128,20 +128,20 @@ void disableCutMotor() {
 }
 
 //* ************************************************************************
-//* *********************** PNEUMATIC CLAMP FUNCTIONS *********************
+//* *********************** FORWARD CLAMP FUNCTIONS *********************
 //* ************************************************************************
 
-void extendClamp() {
+void extendForwardClamp() {
   digitalWrite(CLAMP_RELAY_PIN, LOW);  // LOW = extended
   // No serial output during motor movement per user rules
 }
 
-void retractClamp() {
+void retractForwardClamp() {
   digitalWrite(CLAMP_RELAY_PIN, HIGH); // HIGH = retracted  
   // No serial output during motor movement per user rules
 }
 
-bool isClampRetracted() {
+bool isForwardClampRetracted() {
   return digitalRead(CLAMP_RELAY_PIN) == HIGH;
 }
 
@@ -187,8 +187,11 @@ void startContinuousFeed() {
       Serial.println("Motors enabled for continuous feed");
     }
     
-    // Retract clamp before feed motor movement
-    retractClamp();
+    // Retract forward clamp before feed motor movement
+    retractForwardClamp();
+    
+    // Add 50ms delay to ensure clamp is fully retracted before motor movement
+    delay(50);
     
     // Start continuous forward movement
     feedMotor->setSpeedInHz(feedMotorSpeed);
@@ -206,10 +209,10 @@ void stopContinuousFeed() {
     // Stop the feed motor
     feedMotor->forceStop();
     
-    // Extend clamp when feed motor stops
-    extendClamp();
+    // Extend forward clamp when feed motor stops
+    extendForwardClamp();
     
-    Serial.println("Continuous feed stopped - motor stopped and clamp extended");
+    Serial.println("Continuous feed stopped - motor stopped and forward clamp extended");
   }
 }
 
@@ -244,7 +247,6 @@ String getCurrentStateName() {
     case STATE_IDLE: return "IDLE";
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
-    case STATE_MANUAL: return "MANUAL";
     case STATE_RELOAD: return "RELOAD";
     default: return "UNKNOWN";
   }
@@ -290,7 +292,7 @@ void transitionToState(SystemState newState) {
                    (newState == STATE_IDLE ? "IDLE" : 
                     newState == STATE_FEED_TO_DISTANCE ? "FEED_TO_DISTANCE" :
                     newState == STATE_CUTTING ? "CUTTING" : 
-                    newState == STATE_MANUAL ? "MANUAL" :
+            
                     newState == STATE_RELOAD ? "RELOAD" : "UNKNOWN")));
     
     // Exit current state
@@ -298,7 +300,7 @@ void transitionToState(SystemState newState) {
       case STATE_IDLE: exitIdleState(); break;
       case STATE_FEED_TO_DISTANCE: exitFeedToDistanceState(); break;
       case STATE_CUTTING: exitCuttingState(); break;
-      case STATE_MANUAL: exitManualState(); break;
+  
       case STATE_RELOAD: exitReloadState(); break;
     }
     
@@ -310,7 +312,7 @@ void transitionToState(SystemState newState) {
       case STATE_IDLE: enterIdleState(); break;
       case STATE_FEED_TO_DISTANCE: enterFeedToDistanceState(); break;
       case STATE_CUTTING: enterCuttingState(); break;
-      case STATE_MANUAL: enterManualState(); break;
+  
       case STATE_RELOAD: enterReloadState(); break;
     }
   }
@@ -327,7 +329,7 @@ void updateStateMachine() {
     case STATE_IDLE: updateIdleState(); break;
     case STATE_FEED_TO_DISTANCE: updateFeedToDistanceState(); break;
     case STATE_CUTTING: updateCuttingState(); break;
-    case STATE_MANUAL: updateManualState(); break;
+
     case STATE_RELOAD: updateReloadState(); break;
   }
 }
@@ -338,7 +340,6 @@ void initializeStateMachine() {
   // Initialize variables
   lastActivityTime = millis();
   motorsEnabled = true;  // Motors are permanently enabled
-  manualMode = false;
   
   // Initialize all sensors first
   Serial.println("Initializing sensors...");
@@ -384,8 +385,7 @@ void initializeStateMachine() {
 #include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
 #include "../STATES/cut_cycle/03_CUTTING.cpp"
 
-// Manual state
-#include "../STATES/06_MANUAL.cpp"
+
 
 // Reload state
 #include "../STATES/04_RELOAD.cpp"
@@ -402,7 +402,6 @@ void resetAllStateMachineFlags() {
   
   // Reset global state machine flags
   emergencyStopRequested = false;
-  manualMode = false;
   
   // Reset feed motor timeout lock
   if (feedMotorTimeoutLocked) {

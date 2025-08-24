@@ -87,10 +87,10 @@ void enterFeedToDistanceState() {
     Serial.println("Motors enabled for feed operation");
   }
   
-  // Retract clamp to allow feed motor movement
-  if (!isClampRetracted()) {
-    retractClamp();
-    Serial.println("Clamp retracted for feed motor movement");
+  // Retract forward clamp to allow feed motor movement
+  if (!isForwardClampRetracted()) {
+    retractForwardClamp();
+    Serial.println("Forward clamp retracted for feed motor movement");
   }
   
   //! ************************************************************************
@@ -164,16 +164,16 @@ void updateFeedToDistanceState() {
         Serial.println("Feed motor stopped due to wood loss");
       }
       
-      // Extend clamp to secure any remaining wood
-      extendClamp();
-      Serial.println("Clamp extended to secure remaining wood");
+      // Extend forward clamp to secure any remaining wood
+      extendForwardClamp();
+      Serial.println("Forward clamp extended to secure remaining wood");
       
       // Execute automatic reload movement (5000 steps in reverse)
       if (feedMotor) {
         Serial.println("Executing automatic reload movement - " + String(AUTOMATIC_RELOAD_STEPS) + " steps backward");
         
-        // Retract clamp for feed motor movement
-        retractClamp();
+        // Retract forward clamp for feed motor movement
+        retractForwardClamp();
         
         // Start reload movement
         feedMotor->setSpeedInHz(feedMotorSpeed);
@@ -185,8 +185,8 @@ void updateFeedToDistanceState() {
           delay(10); // Small delay to prevent blocking
         }
         
-        // Extend clamp to secure wood in new position
-        extendClamp();
+        // Extend forward clamp to secure wood in new position
+        extendForwardClamp();
         Serial.println("Automatic reload movement complete - waiting for wood sensor reset");
         
         // Set flag to wait for wood sensor to be deactivated then reactivated
@@ -274,9 +274,9 @@ void updateFeedToDistanceState() {
       }
     }
     
-    // Extend clamp to secure wood
-    extendClamp();
-    Serial.println("Clamp extended to secure wood");
+    // Extend forward clamp to secure wood
+    extendForwardClamp();
+    Serial.println("Forward clamp extended to secure wood");
     
     // Start the configured delay timer
     delayTimerStarted = true;
@@ -341,9 +341,9 @@ void emergencyStopFeedOperation() {
     Serial.println("Emergency stop: Feed motor stopped");
   }
   
-  // Extend clamp to secure wood
-  extendClamp();
-  Serial.println("Emergency stop: Clamp extended to secure wood");
+  // Extend forward clamp to secure wood
+  extendForwardClamp();
+  Serial.println("Emergency stop: Forward clamp extended to secure wood");
   
   // Set feed motor timeout lock
   setFeedMotorTimeoutLocked(true);

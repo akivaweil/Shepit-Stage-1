@@ -45,12 +45,7 @@ void processSerialCommand(String command) {
   
   Serial.println("Command received: " + command);
   
-  // Transition to manual mode for motor commands
-  if (command.startsWith("feed") || command.startsWith("cut") || 
-                      command == "enablefeed" || command == "disablefeed" ||
-                      command == "enablecut" || command == "disablecut") {
-    transitionToState(STATE_MANUAL);
-  }
+
   
   // Motor enable/disable commands (motors now use sleep mode)
   if (command == "enablefeed") {
@@ -76,25 +71,25 @@ void processSerialCommand(String command) {
   
   // Pneumatic clamp commands
   else if (command == "clampextend") {
-    extendClamp();
-    Serial.println("Clamp: EXTENDED");
+    extendForwardClamp();
+    Serial.println("Forward clamp: EXTENDED");
   }
   else if (command == "clampretract") {
-    retractClamp();
-    Serial.println("Clamp: RETRACTED");
+    retractForwardClamp();
+    Serial.println("Forward clamp: RETRACTED");
   }
   
   // Feed motor movement commands
   else if (command == "feedforward") {
     if (feedMotor) {
-      retractClamp(); // Retract clamp before feed motor movement
+      retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor: moving forward");
     }
   }
   else if (command == "feedbackward") {
     if (feedMotor) {
-      retractClamp(); // Retract clamp before feed motor movement
+      retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor: moving backward");
     }
@@ -131,7 +126,7 @@ void processSerialCommand(String command) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
     if (feedMotor && steps != 0) {
-      retractClamp(); // Retract clamp before feed motor movement
+      retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
     }
@@ -168,7 +163,7 @@ void processSerialCommand(String command) {
     Serial.println("=== SYSTEM STATUS ===");
     Serial.println("Current state: " + getCurrentStateName());
     Serial.println("Motors enabled: " + String(motorsEnabled));
-    Serial.println("Manual mode: " + String(manualMode));
+  
     Serial.println("Run cycle switch: " + String(isRunCycleSwitchActive() ? "ACTIVE" : "INACTIVE"));
     Serial.println("Wood present: " + String(isWoodPresent() ? "YES" : "NO"));
     Serial.println("Wood at correct distance: " + String(isWoodAtCorrectDistance() ? "YES" : "NO"));
@@ -180,7 +175,7 @@ void processSerialCommand(String command) {
     Serial.println("Cut motor running: " + String(cutMotor ? cutMotor->isRunning() : false));
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
-    Serial.println("Pneumatic clamp: " + String(isClampRetracted() ? "RETRACTED" : "EXTENDED"));
+    Serial.println("Forward clamp: " + String(isForwardClampRetracted() ? "RETRACTED" : "EXTENDED"));
     Serial.println("Reload mode active: " + String(currentSystemState == STATE_RELOAD ? "YES" : "NO"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
   }
@@ -224,8 +219,8 @@ void processSerialCommand(String command) {
   else if (command == "testreload") {
     Serial.println("=== RELOAD SWITCH TEST ===");
     Serial.println("Raw pin value: " + String(digitalRead(RELOAD_SWITCH_PIN)));
-    Serial.println("Bounce2 state: " + String(rightSwitch.read()));
-    Serial.println("isRightSwitchActive(): " + String(isRightSwitchActive()));
+      Serial.println("Bounce2 state: " + String(reloadSwitch.read()));
+  Serial.println("isReloadSwitchActive(): " + String(isReloadSwitchActive()));
     Serial.println("Current system state: " + getCurrentStateName());
     Serial.println("========================");
   }
@@ -338,7 +333,7 @@ void setup() {
   //! ************************************************************************
   Serial.println("Setting up pneumatic clamp relay...");
   pinMode(CLAMP_RELAY_PIN, OUTPUT);
-  extendClamp(); // Start with clamp extended (ready position)
+  extendForwardClamp(); // Start with forward clamp extended (ready position)
   Serial.println("Pneumatic clamp initialized - starting in extended position");
 
   //! ************************************************************************

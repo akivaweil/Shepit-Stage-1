@@ -51,8 +51,7 @@ void enterIdleState() {
   // Start 3-second motor timeout countdown for sleep mode
   resetMotorTimeout();
   
-  // Reset manual mode flag
-  manualMode = false;
+
   
   // CRITICAL FIX: Reset feed motor control state - ensure clean start
   feedMotorShouldRun = false;
@@ -226,15 +225,15 @@ void updateIdleState() {
       
       if (clampShouldBeRetracted) {
         // Clamp should be retracted
-        if (!isClampRetracted()) {
-          retractClamp();
-          Serial.println("Clamp: RETRACTED");
-        }
+              if (!isForwardClampRetracted()) {
+        retractForwardClamp();
+        Serial.println("Forward clamp: RETRACTED");
+      }
       } else {
-        // Clamp should be extended
-        if (isClampRetracted()) {
-          extendClamp();
-          Serial.println("Clamp: EXTENDED");
+        // Forward clamp should be extended
+        if (isForwardClampRetracted()) {
+          extendForwardClamp();
+          Serial.println("Forward clamp: EXTENDED");
         }
       }
       
@@ -388,8 +387,8 @@ void updateIdleState() {
       // Stop the feed motor immediately
       feedMotor->forceStop();
       
-      // Extend clamp to secure wood
-      extendClamp();
+      // Extend forward clamp to secure wood
+      extendForwardClamp();
       
       // Update tracking variables
       feedMotorWasRunning = false;
@@ -439,7 +438,7 @@ void updateIdleState() {
   //! RELOAD SWITCH MONITORING - AUTOMATIC RELOAD STATE TRANSITION
   //! ************************************************************************
   // Check if reload switch (right switch) is activated to automatically start reload mode
-  bool reloadSwitchActive = isRightSwitchActive();
+  bool reloadSwitchActive = isReloadSwitchActive();
   static bool reloadSwitchWasActive = false;
   
   // No periodic reload switch monitoring logs
@@ -454,10 +453,10 @@ void updateIdleState() {
       Serial.println("Feed motor: STOPPED");
     }
     
-    // Extend clamp to secure wood before reload operation
-    if (!isClampRetracted()) {
-      extendClamp();
-      Serial.println("Clamp: EXTENDED");
+    // Extend forward clamp to secure wood before reload operation
+    if (!isForwardClampRetracted()) {
+      extendForwardClamp();
+      Serial.println("Forward clamp: EXTENDED");
     }
     
     // Transition to reload state

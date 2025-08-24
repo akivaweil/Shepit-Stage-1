@@ -14,8 +14,7 @@ enum SystemState {
   STATE_IDLE = 0,
   STATE_FEED_TO_DISTANCE = 1,
   STATE_CUTTING = 2,
-  STATE_MANUAL = 3,
-  STATE_RELOAD = 4
+  STATE_RELOAD = 3
 };
 
 // Cutting cycle step enumeration
@@ -36,7 +35,7 @@ extern SystemState currentSystemState;
 extern SystemState previousSystemState;
 extern unsigned long lastActivityTime;
 extern bool motorsEnabled;
-extern bool manualMode;
+
 // Motor timeout and enable delay constants moved to Config.h
 
 // Motor enable delay tracking
@@ -66,9 +65,9 @@ void transitionToState(SystemState newState);
 String getCurrentStateName();
 
 // System state functions
-bool isSystemIdle();
-bool isSystemBusy();
-bool isInCuttingCycle();
+  bool isSystemIdle();
+  bool isSystemBusy();
+  bool isInCuttingCycle();
 void handleEmergencyStop();
 
 // Motor control functions
@@ -101,10 +100,10 @@ void resetMotorMovementFlags();
 // Function to reset feed motor control variables (IDLE state specific)
 void resetFeedMotorControlVariables();
 
-// Pneumatic clamp control functions
-void extendClamp();
-void retractClamp();
-bool isClampRetracted();
+// Forward clamp control functions
+void extendForwardClamp();
+void retractForwardClamp();
+bool isForwardClampRetracted();
 
 // Wood sensor functions
 bool isWoodPresent();
@@ -120,7 +119,7 @@ bool isWoodAtCorrectDistance();
 void initializeFeedDistanceSensor();
 void initializeWoodPresenceSensor();
 void initializeRunCycleSwitch();
-void initializeRightSwitch();
+void initializeReloadSwitch();
 void initializeRedButton();
 void initializeAllSensors();
 
@@ -128,7 +127,7 @@ void initializeAllSensors();
 void updateFeedDistanceSensor();
 void updateWoodPresenceSensor();
 void updateRunCycleSwitch();
-void updateRightSwitch();
+void updateReloadSwitch();
 void updateRedButton();
 void updateAllSensors();
 
@@ -137,14 +136,14 @@ bool isFeedDistanceSensorTriggered();
 bool isWoodPresenceSensorActive();
 bool isRunCycleSwitchActive();
 bool isRunCycleSwitchActiveCentralized();
-bool isRightSwitchActive();
+bool isReloadSwitchActive();
 bool isRedButtonPressed();
 
 // Sensor reset functions
 void resetFeedDistanceSensor();
 void resetWoodPresenceSensor();
 void resetRunCycleSwitch();
-void resetRightSwitch();
+void resetReloadSwitch();
 void resetRedButton();
 void resetAllSensors();
 
@@ -152,7 +151,7 @@ void resetAllSensors();
 extern Bounce2::Button feedDistanceSensor;
 extern Bounce2::Button woodPresenceSensor;
 extern Bounce2::Button runCycleSwitch;
-extern Bounce2::Button rightSwitch;
+extern Bounce2::Button reloadSwitch;
 extern Bounce2::Button redButton;
 
 // Continuous feed functions
@@ -183,9 +182,9 @@ void exitCuttingState();
 
 // Cutting cycle step functions
 void updateActivateMotorsStep();
-void updateRetractClampStep();
+void updateRetractForwardClampStep();
 void updateFeedForwardStep();
-void updateExtendClampStep();
+void updateExtendForwardClampStep();
 void updateCutWoodStep();
 void updateReturnCutMotorStep();
 void updateCheckConditionsStep();
@@ -194,9 +193,7 @@ void updateCheckConditionsStep();
 void resetCutMotorStepFlags();
 void resetReturnMotorStepFlags();
 
-void enterManualState();
-void updateManualState();
-void exitManualState();
+
 
 void enterReloadState();
 void updateReloadState();

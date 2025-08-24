@@ -46,8 +46,8 @@ void enterReloadState() {
     delay(50); // Give motors time to enable
   }
   
-  // Start with clamp retracted for feed motor movement
-  retractClamp();
+  // Start with forward clamp retracted for feed motor movement
+  retractForwardClamp();
   
   Serial.println("RELOAD: Starting reload mode - feed motor reversing");
   
@@ -97,13 +97,13 @@ void updateReloadState() {
   //! ************************************************************************
   //! SAFETY CHECK: RIGHT SWITCH DEACTIVATION DETECTION
   //! ************************************************************************
-  // Check if right switch is turned off during operation - return to idle immediately
-  bool rightSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
+  // Check if reload switch is turned off during operation - return to idle immediately
+  bool reloadSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
   
   // No periodic switch state monitoring logs
   
-  if (!rightSwitchActive) {
-    Serial.println("RELOAD: Right switch turned OFF - stopping operation");
+  if (!reloadSwitchActive) {
+    Serial.println("RELOAD: Reload switch turned OFF - stopping operation");
     
     // Stop the feed motor immediately
     if (feedMotor && feedMotor->isRunning()) {
@@ -125,8 +125,8 @@ void updateReloadState() {
       reloadMotorMoving = false;
     }
     
-    // Extend clamp to secure wood in current position
-    extendClamp();
+    // Extend forward clamp to secure wood in current position
+    extendForwardClamp();
     
     // Return to idle state
     transitionToState(STATE_IDLE);
@@ -168,8 +168,8 @@ void updateReloadState() {
         reloadMotorMoving = false;
       }
       
-      // Extend clamp to secure wood in current position
-      extendClamp();
+      // Extend forward clamp to secure wood in current position
+      extendForwardClamp();
       
       // Return to idle state
       transitionToState(STATE_IDLE);
@@ -188,8 +188,8 @@ void updateReloadState() {
     
     Serial.println("RELOAD: Movement complete");
     
-    // Extend clamp to secure wood in new position
-    extendClamp();
+    // Extend forward clamp to secure wood in new position
+    extendForwardClamp();
     
     // Return to idle state after successful completion
     Serial.println("RELOAD: Operation successful");
