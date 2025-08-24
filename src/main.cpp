@@ -233,24 +233,10 @@ void processSerialCommand(String command) {
     }
   }
   
-  // Return to idle from manual mode
+  // Return to idle from any state
   else if (command == "idle") {
-    if (manualMode) {
-      Serial.println("Exiting manual mode - returning to IDLE");
-      transitionToState(STATE_IDLE);
-    } else {
-      Serial.println("Already in IDLE state");
-    }
-  }
-  
-  // Exit manual mode
-  else if (command == "exit") {
-    if (manualMode) {
-      Serial.println("Exiting manual mode - returning to IDLE");
-      transitionToState(STATE_IDLE);
-    } else {
-      Serial.println("Not in manual mode");
-    }
+    Serial.println("Returning to IDLE state");
+    transitionToState(STATE_IDLE);
   }
   
   // Help command
@@ -276,7 +262,6 @@ void processSerialCommand(String command) {
     Serial.println("  stopreload - Stop reload mode and return to IDLE");
     Serial.println("  stop/emergency - Emergency stop");
     Serial.println("  idle - Return to IDLE state");
-    Serial.println("  exit - Exit manual mode");
     Serial.println("  help - Show this help");
   }
   
