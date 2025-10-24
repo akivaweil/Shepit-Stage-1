@@ -77,7 +77,7 @@ void initializeRedButton() {
 
 void initializeHomeSwitch() {
   // Initialize home switch with proper debouncing
-  pinMode(HOME_SWITCH_PIN, INPUT_PULLUP); // Set pin mode with internal pullup (active LOW)
+  pinMode(HOME_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown (active HIGH)
   homeSwitch.attach(HOME_SWITCH_PIN, INPUT);
   homeSwitch.interval(sensorDebounceTime); // Standard sensor debounce
   
@@ -181,8 +181,8 @@ bool isRedButtonPressed() {
 }
 
 bool isHomeSwitchTriggered() {
-  // Home switch is active LOW - returns true when at home position
-  return homeSwitch.read() == LOW;
+  // Home switch is active HIGH - returns true when at home position
+  return homeSwitch.read() == HIGH;
 }
 
 //* ************************************************************************
