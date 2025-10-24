@@ -49,12 +49,21 @@ void enterHomingState() {
     cutMotor->setSpeedInHz(HOMING_SPEED);
     cutMotor->setAcceleration(HOMING_ACCELERATION);
     
-    // Move backward indefinitely until home switch triggers
-    cutMotor->runBackward();
+    // Move backward in large steps until home switch triggers
+    // Use a very large negative value to simulate continuous movement
+    cutMotor->move(-1000000);
     homingMotorMoving = true;
     homingStartTime = millis();
     
     Serial.println("HOMING: Cut motor moving backward toward home position");
+    
+    // Verify motor is actually running
+    delay(10);
+    if (cutMotor->isRunning()) {
+      Serial.println("HOMING: Motor confirmed running");
+    } else {
+      Serial.println("HOMING: WARNING - Motor not running");
+    }
   } else {
     Serial.println("HOMING: ERROR - cutMotor pointer is NULL");
   }
