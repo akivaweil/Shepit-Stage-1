@@ -8,6 +8,7 @@ extern FastAccelStepper *cutMotor;
 
 // Include state implementations
 #include "../STATES/00_IDLE.cpp"
+#include "../STATES/01_HOMING.cpp"
 #include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
 #include "../STATES/cut_cycle/03_CUTTING.cpp"
 #include "../STATES/04_RELOAD.cpp"
@@ -251,6 +252,7 @@ void setFeedMotorTimeoutLocked(bool locked) {
 String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
+    case STATE_HOMING: return "HOMING";
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
     case STATE_RELOAD: return "RELOAD";
@@ -267,7 +269,8 @@ bool isSystemIdle() {
 }
 
 bool isSystemBusy() {
-  return (currentSystemState == STATE_FEED_TO_DISTANCE ||
+  return (currentSystemState == STATE_HOMING ||
+          currentSystemState == STATE_FEED_TO_DISTANCE ||
           currentSystemState == STATE_CUTTING ||
           currentSystemState == STATE_RELOAD);
 }
@@ -302,6 +305,9 @@ void transitionToState(SystemState newState) {
     case STATE_IDLE:
       // Exit handled by enter function
       break;
+    case STATE_HOMING:
+      exitHomingState();
+      break;
     case STATE_FEED_TO_DISTANCE:
       // Exit handled by enter function
       break;
@@ -321,6 +327,9 @@ void transitionToState(SystemState newState) {
   switch (newState) {
     case STATE_IDLE:
       enterIdleState();
+      break;
+    case STATE_HOMING:
+      enterHomingState();
       break;
     case STATE_FEED_TO_DISTANCE:
       enterFeedToDistanceState();
@@ -342,6 +351,9 @@ void updateStateMachine() {
   switch (currentSystemState) {
     case STATE_IDLE:
       updateIdleState();
+      break;
+    case STATE_HOMING:
+      updateHomingState();
       break;
     case STATE_FEED_TO_DISTANCE:
       updateFeedToDistanceState();
@@ -382,14 +394,14 @@ void initializeStateMachine() {
     Serial.println("✓ STARTUP SAFETY: Run cycle switch is OFF - system ready");
   }
   
-  // Start in idle state
-  currentSystemState = STATE_IDLE;
-  previousSystemState = STATE_IDLE;
+  // Start in homing state
+  currentSystemState = STATE_HOMING;
+  previousSystemState = STATE_HOMING;
   
   // Enter initial state
-  enterIdleState();
+  enterHomingState();
   
-  Serial.println("State machine initialized - starting in IDLE state");
+  Serial.println("State machine initialized - starting in HOMING state");
 }
 
 //* ************************************************************************
@@ -397,6 +409,7 @@ void initializeStateMachine() {
 //* ************************************************************************
 // State implementations are in the States folder:
 // - 00_IDLE.cpp
+// - 01_HOMING.cpp
 // - 02_FEED_TO_DISTANCE.cpp
 // - 03_CUTTING.cpp
 // - 04_RELOAD.cpp

@@ -15,6 +15,7 @@ Bounce2::Button woodPresenceSensor = Bounce2::Button();
 Bounce2::Button runCycleSwitch = Bounce2::Button();
 Bounce2::Button reloadSwitch = Bounce2::Button();
 Bounce2::Button redButton = Bounce2::Button();
+Bounce2::Button homeSwitch = Bounce2::Button();
 
 
 
@@ -74,6 +75,16 @@ void initializeRedButton() {
   Serial.println("Init: Red button");
 }
 
+void initializeHomeSwitch() {
+  // Initialize home switch with proper debouncing
+  pinMode(HOME_SWITCH_PIN, INPUT_PULLUP); // Set pin mode with internal pullup (active LOW)
+  homeSwitch.attach(HOME_SWITCH_PIN, INPUT);
+  homeSwitch.interval(sensorDebounceTime); // Standard sensor debounce
+  
+  // Minimal log
+  Serial.println("Init: Home switch");
+}
+
 void initializeAllSensors() {
   // Initialize all sensors at once
   Serial.println("Initializing sensors...");
@@ -92,6 +103,7 @@ void initializeAllSensors() {
   
   initializeRedButton();
   
+  initializeHomeSwitch();
   
   Serial.println("Sensors initialized");
 }
@@ -124,6 +136,10 @@ void updateRedButton() {
   redButton.update();
 }
 
+void updateHomeSwitch() {
+  homeSwitch.update();
+}
+
 void updateAllSensors() {
   // Update all sensors at once
   updateFeedDistanceSensor();
@@ -131,6 +147,7 @@ void updateAllSensors() {
   updateRunCycleSwitch();
   updateReloadSwitch();
   updateRedButton();
+  updateHomeSwitch();
 }
 
 //* ************************************************************************
@@ -161,6 +178,11 @@ bool isRunCycleSwitchActiveCentralized() {
 
 bool isRedButtonPressed() {
   return redButton.read() == HIGH;
+}
+
+bool isHomeSwitchTriggered() {
+  // Home switch is active LOW - returns true when at home position
+  return homeSwitch.read() == LOW;
 }
 
 //* ************************************************************************
@@ -199,6 +221,12 @@ void resetRedButton() {
   redButton.interval(sensorDebounceTime);
 }
 
+void resetHomeSwitch() {
+  // Bounce2 doesn't have a reset method, just reinitialize
+  homeSwitch.attach(HOME_SWITCH_PIN, INPUT);
+  homeSwitch.interval(sensorDebounceTime);
+}
+
 void resetAllSensors() {
   // Reset all sensors
   resetFeedDistanceSensor();
@@ -206,4 +234,5 @@ void resetAllSensors() {
   resetRunCycleSwitch();
   resetReloadSwitch();
   resetRedButton();
+  resetHomeSwitch();
 }

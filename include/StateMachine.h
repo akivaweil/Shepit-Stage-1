@@ -12,9 +12,10 @@
 // State enumeration
 enum SystemState {
   STATE_IDLE = 0,
-  STATE_FEED_TO_DISTANCE = 1,
-  STATE_CUTTING = 2,
-  STATE_RELOAD = 3
+  STATE_HOMING = 1,
+  STATE_FEED_TO_DISTANCE = 2,
+  STATE_CUTTING = 3,
+  STATE_RELOAD = 4
 };
 
 // System events for state machine
@@ -140,6 +141,7 @@ void initializeWoodPresenceSensor();
 void initializeRunCycleSwitch();
 void initializeReloadSwitch();
 void initializeRedButton();
+void initializeHomeSwitch();
 void initializeAllSensors();
 
 // Sensor update functions
@@ -148,6 +150,7 @@ void updateWoodPresenceSensor();
 void updateRunCycleSwitch();
 void updateReloadSwitch();
 void updateRedButton();
+void updateHomeSwitch();
 void updateAllSensors();
 
 // Sensor read functions
@@ -157,6 +160,7 @@ bool isRunCycleSwitchActive();
 bool isRunCycleSwitchActiveCentralized();
 bool isReloadSwitchActive();
 bool isRedButtonPressed();
+bool isHomeSwitchTriggered();
 
 // Sensor reset functions
 void resetFeedDistanceSensor();
@@ -164,6 +168,7 @@ void resetWoodPresenceSensor();
 void resetRunCycleSwitch();
 void resetReloadSwitch();
 void resetRedButton();
+void resetHomeSwitch();
 void resetAllSensors();
 
 // External references to sensor objects
@@ -172,6 +177,7 @@ extern Bounce2::Button woodPresenceSensor;
 extern Bounce2::Button runCycleSwitch;
 extern Bounce2::Button reloadSwitch;
 extern Bounce2::Button redButton;
+extern Bounce2::Button homeSwitch;
 
 // Continuous feed functions
 void startContinuousFeed();
@@ -190,6 +196,10 @@ void exitIdleState();
 
 // Function to reset feed motor control variables in IDLE state
 void resetIdleFeedMotorControl();
+
+void enterHomingState();
+void updateHomingState();
+void exitHomingState();
 
 void enterFeedToDistanceState();
 void updateFeedToDistanceState();

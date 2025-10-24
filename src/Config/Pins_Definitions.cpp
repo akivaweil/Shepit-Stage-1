@@ -33,6 +33,8 @@ const int WOOD_PRESENT_SENSOR_PIN = 3;
 // Wood distance sensor pin (active LOW - LOW when wood detected)
 const int WOOD_DISTANCE_SENSOR_PIN = 10;
 
+// Home switch pin (active LOW - LOW when at home position)
+const int HOME_SWITCH_PIN = 1;
 
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
 const int CLAMP_RELAY_PIN = 37; 
