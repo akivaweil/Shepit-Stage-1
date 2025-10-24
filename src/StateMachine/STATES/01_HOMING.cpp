@@ -70,8 +70,7 @@ void enterHomingState() {
 }
 
 void updateHomingState() {
-  // Update home switch sensor for proper debouncing
-  updateHomeSwitch();
+  // Home switch read directly without debounce
   
   //! ************************************************************************
   //! TIMEOUT DETECTION
