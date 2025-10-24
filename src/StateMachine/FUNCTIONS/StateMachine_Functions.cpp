@@ -6,8 +6,11 @@
 extern FastAccelStepper *feedMotor;
 extern FastAccelStepper *cutMotor;
 
-// Global state manager instance
-StateManager stateMachine;
+// Include state implementations
+#include "../STATES/00_IDLE.cpp"
+#include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
+#include "../STATES/cut_cycle/03_CUTTING.cpp"
+#include "../STATES/04_RELOAD.cpp"
 
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
@@ -246,21 +249,27 @@ void setFeedMotorTimeoutLocked(bool locked) {
 //* ************************************************************************
 
 String getCurrentStateName() {
-  return String(stateMachine.getCurrentStateName());
+  switch (currentSystemState) {
+    case STATE_IDLE: return "IDLE";
+    case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
+    case STATE_CUTTING: return "CUTTING";
+    case STATE_RELOAD: return "RELOAD";
+    default: return "UNKNOWN";
+  }
 }
 
 SystemState getCurrentState() {
-  return stateMachine.getCurrentState();
+  return currentSystemState;
 }
 
 bool isSystemIdle() {
-  return stateMachine.getCurrentState() == STATE_IDLE;
+  return currentSystemState == STATE_IDLE;
 }
 
 bool isSystemBusy() {
-  return (stateMachine.getCurrentState() == STATE_FEED_TO_DISTANCE ||
-          stateMachine.getCurrentState() == STATE_CUTTING ||
-          stateMachine.getCurrentState() == STATE_RELOAD);
+  return (currentSystemState == STATE_FEED_TO_DISTANCE ||
+          currentSystemState == STATE_CUTTING ||
+          currentSystemState == STATE_RELOAD);
 }
 
 //* ************************************************************************
@@ -270,7 +279,7 @@ bool isSystemBusy() {
 // This prevents feed motor from running during cutting operations
 
 bool isInCuttingCycle() {
-  return (stateMachine.getCurrentState() == STATE_CUTTING);
+  return (currentSystemState == STATE_CUTTING);
 }
 
 void handleEmergencyStop() {
@@ -288,16 +297,62 @@ void handleEmergencyStop() {
 }
 
 void transitionToState(SystemState newState) {
-  // Use the new StateManager to handle state transitions
-  stateMachine.transitionTo(newState);
+  // Exit current state
+  switch (currentSystemState) {
+    case STATE_IDLE:
+      // Exit handled by enter function
+      break;
+    case STATE_FEED_TO_DISTANCE:
+      // Exit handled by enter function
+      break;
+    case STATE_CUTTING:
+      // Exit handled by enter function
+      break;
+    case STATE_RELOAD:
+      // Exit handled by enter function
+      break;
+  }
+  
+  // Update state tracking
+  previousSystemState = currentSystemState;
+  currentSystemState = newState;
+  
+  // Enter new state
+  switch (newState) {
+    case STATE_IDLE:
+      enterIdleState();
+      break;
+    case STATE_FEED_TO_DISTANCE:
+      enterFeedToDistanceState();
+      break;
+    case STATE_CUTTING:
+      enterCuttingState();
+      break;
+    case STATE_RELOAD:
+      enterReloadState();
+      break;
+  }
 }
 
 void updateStateMachine() {
   // Update all sensors first (debouncing)
   updateAllSensors();
   
-  // Use the new StateManager to handle state updates
-  stateMachine.update();
+  // Update current state
+  switch (currentSystemState) {
+    case STATE_IDLE:
+      updateIdleState();
+      break;
+    case STATE_FEED_TO_DISTANCE:
+      updateFeedToDistanceState();
+      break;
+    case STATE_CUTTING:
+      updateCuttingState();
+      break;
+    case STATE_RELOAD:
+      updateReloadState();
+      break;
+  }
 }
 
 void initializeStateMachine() {
@@ -331,17 +386,20 @@ void initializeStateMachine() {
   currentSystemState = STATE_IDLE;
   previousSystemState = STATE_IDLE;
   
-  // Initialize the new StateManager (will set up initial state)
-  // The StateManager constructor handles the initial state setup
+  // Enter initial state
+  enterIdleState();
   
-  Serial.println("State machine initialized with new StateManager - starting in IDLE state");
+  Serial.println("State machine initialized - starting in IDLE state");
 }
 
 //* ************************************************************************
 //* *********************** STATE IMPLEMENTATIONS **************************
 //* ************************************************************************
-// Note: State implementations are now handled by the StateManager class
-// Individual state files are included in StateManager.cpp
+// State implementations are in the States folder:
+// - 00_IDLE.cpp
+// - 02_FEED_TO_DISTANCE.cpp
+// - 03_CUTTING.cpp
+// - 04_RELOAD.cpp
 
 //* ************************************************************************
 //* *********************** STATE MACHINE RESET FUNCTIONS *********************

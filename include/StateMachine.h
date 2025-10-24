@@ -41,77 +41,10 @@ enum CuttingStep {
 };
 
 //* ************************************************************************
-//* *********************** STATE PATTERN CLASSES *************************
+//* *********************** STATE PATTERN *********************************
 //* ************************************************************************
-
-// Forward declarations
-class State;
-class StateManager;
-
-// Base State class - all states inherit from this
-class State {
-public:
-  virtual ~State() = default;
-  
-  // Core state lifecycle methods
-  virtual void enter() = 0;                    // Called when entering state
-  virtual void update() = 0;                   // Called every loop iteration
-  virtual void exit() = 0;                     // Called when leaving state
-  
-  // Event handling for state-specific responses
-  virtual void handleEvent(SystemEvent event) = 0;
-  
-  // State identification
-  virtual SystemState getStateId() const = 0;
-  virtual const char* getStateName() const = 0;
-  
-  // State-specific safety checks
-  virtual bool canTransitionTo(SystemState targetState) const = 0;
-  
-  // State-specific timeout handling
-  virtual unsigned long getStateTimeout() const = 0;
-  virtual void handleTimeout() = 0;
-  
-  // State transition request handling
-  virtual bool hasTransitionRequest() const = 0;
-  virtual SystemState getRequestedState() const = 0;
-  virtual void clearTransitionRequest() = 0;
-};
-
-// State Manager class - handles state transitions and current state
-class StateManager {
-private:
-  State* currentState;
-  State* previousState;
-  unsigned long stateEntryTime;
-  bool stateChangeRequested;
-  SystemState pendingState;
-  
-public:
-  StateManager();
-  ~StateManager();
-  
-  // Main update function
-  void update();
-  
-  // State transition management
-  void transitionTo(SystemState newState);
-  void executeStateChange();
-  
-  // State information
-  SystemState getCurrentState() const;
-  const char* getCurrentStateName() const;
-  State* getCurrentStateObject() const;
-  
-  // State change tracking
-  bool isStateChangeRequested() const;
-  SystemState getPendingState() const;
-  
-private:
-  State* getStateObject(SystemState state);
-  const char* getStateName(SystemState state);
-  void checkForStateTransitionRequests();
-};
+// State machine uses function-based implementation
+// Each state has: enterState(), updateState(), exitState() functions
 
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
@@ -138,9 +71,6 @@ extern bool startupSafetyResetRequired;
 // Motor objects
 extern FastAccelStepper *feedMotor;
 extern FastAccelStepper *cutMotor;
-
-// Global state manager instance
-extern StateManager stateMachine;
 
 //* ************************************************************************
 //* *********************** FUNCTION DECLARATIONS *************************
@@ -253,7 +183,7 @@ void emergencyStopFeedOperation();
 // Reload mode state
 extern bool reloadModeActive;
 
-// Individual state functions (legacy - will be replaced by State classes)
+// Individual state functions
 void enterIdleState();
 void updateIdleState();
 void exitIdleState();
