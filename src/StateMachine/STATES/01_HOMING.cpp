@@ -20,16 +20,8 @@ void enterHomingState() {
   homingMotorMoving = false;
   enableAllMotors();
   
-  // Check if already at home position
-  if (isHomeSwitchTriggered()) {
-    if (cutMotor) {
-      cutMotor->setCurrentPosition(0);
-    }
-    transitionToState(STATE_FEED_TO_DISTANCE);
-    return;
-  }
-  
-  // Start cut motor moving backward toward home switch
+  // Always start cut motor moving backward toward home switch
+  // This ensures the home switch is pressed before proceeding
   if (cutMotor) {
     cutMotor->setSpeedInHz(HOMING_SPEED);
     cutMotor->setAcceleration(HOMING_ACCELERATION);
