@@ -25,7 +25,7 @@ void enterHomingState() {
     if (cutMotor) {
       cutMotor->setCurrentPosition(0);
     }
-    transitionToState(STATE_IDLE);
+    transitionToState(STATE_FEED_TO_DISTANCE);
     return;
   }
   
@@ -48,7 +48,7 @@ void updateHomingState() {
       cutMotor->setCurrentPosition(0);
     }
     homingMotorMoving = false;
-    transitionToState(STATE_IDLE);
+    transitionToState(STATE_FEED_TO_DISTANCE);
   }
 }
 

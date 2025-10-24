@@ -191,7 +191,7 @@ void processSerialCommand(String command) {
       // Check if run cycle switch is active and wood is present before starting
       if (isRunCycleSwitchActive() && isWoodPresent()) {
         Serial.println("Starting manual sequence - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
-        transitionToState(STATE_FEED_TO_DISTANCE);
+        transitionToState(STATE_HOMING);
       } else if (!isRunCycleSwitchActive()) {
         Serial.println("Cannot start sequence - RUN CYCLE SWITCH NOT ACTIVE");
       } else if (!isWoodPresent()) {
@@ -409,11 +409,11 @@ void loop() {
     if (isSystemIdle()) {
       // Check if run cycle switch is active and wood is present before starting
       if (isRunCycleSwitchActive() && isWoodPresent()) {
-        // Start new sequence - feed to distance then cutting cycle
-        Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED - STARTING FEED TO DISTANCE SEQUENCE ***");
+        // Start new sequence - home cut motor then feed to distance then cutting cycle
+        Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED - STARTING HOMING SEQUENCE ***");
         cycleStartTime = millis();
         emergencyStopRequested = false;
-        transitionToState(STATE_FEED_TO_DISTANCE);
+        transitionToState(STATE_HOMING);
       } else if (!isRunCycleSwitchActive()) {
         Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH NOT ACTIVE - Cannot start cutting cycle ***");
       } else if (!isWoodPresent()) {
