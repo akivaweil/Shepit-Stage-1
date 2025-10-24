@@ -43,5 +43,5 @@ const unsigned long buttonDebounceTime = 20;
 //* ************************************************************************
 
 // Sensor debounce intervals in milliseconds
-const unsigned long sensorDebounceTime = 20;           // Standard sensor debounce (wood, switches, buttons)
+const unsigned long sensorDebounceTime = 2;           // Standard sensor debounce (wood, switches, buttons)
 const unsigned long distanceSensorDebounceTime = 20;   // Distance sensor specific debounce 
