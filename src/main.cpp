@@ -290,7 +290,7 @@ void setup() {
   Serial.println("OTA initialization complete");
 
   //! ************************************************************************
-  //! STEP 3: INITIALIZE ENABLE PINS AND STATE MACHINE
+  //! STEP 3: INITIALIZE ENABLE PINS
   //! ************************************************************************
   Serial.println("Setting up motor enable pins...");
   pinMode(FEED_MOTOR_ENABLE_PIN, OUTPUT);
@@ -300,10 +300,6 @@ void setup() {
   digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
   Serial.println("Motors enabled on startup - sleep mode after 3 seconds of idle");
-  
-  // Initialize state machine
-  Serial.println("Initializing state machine...");
-  initializeStateMachine();
 
   //! ************************************************************************
   //! STEP 4: INITIALIZE BUTTON WITH PULLDOWN (ACTIVE HIGH)
@@ -322,7 +318,7 @@ void setup() {
   Serial.println("Pneumatic clamp initialized - starting in extended position");
 
   //! ************************************************************************
-  //! STEP 6: INITIALIZE STEPPER MOTOR ENGINE
+  //! STEP 6: INITIALIZE STEPPER MOTOR ENGINE AND CREATE MOTORS
   //! ************************************************************************
   Serial.println("Initializing stepper motor engine...");
   engine.init();
@@ -362,6 +358,12 @@ void setup() {
   } else {
     Serial.println("ERROR: Failed to create cut motor instance");
   }
+
+  //! ************************************************************************
+  //! STEP 7: INITIALIZE STATE MACHINE (AFTER MOTORS ARE CREATED)
+  //! ************************************************************************
+  Serial.println("Initializing state machine...");
+  initializeStateMachine();
 
   Serial.println("=== SYSTEM READY - WAITING FOR BUTTON PRESS ===");
   Serial.println("Type 'help' for available serial commands");
