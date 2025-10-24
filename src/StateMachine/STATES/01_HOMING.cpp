@@ -18,7 +18,7 @@ extern FastAccelStepper *cutMotor;
 static unsigned long homingStartTime = 0;
 static bool homingMotorMoving = false;
 static const unsigned long HOMING_TIMEOUT_MS = 30000; // 30 second timeout
-static const float HOMING_SPEED = 1500.0; // Slower speed for homing accuracy
+static const float HOMING_SPEED = 750.0; // Slower speed for homing accuracy (50% of original)
 static const float HOMING_ACCELERATION = 10000.0; // Lower acceleration for homing
 
 void enterHomingState() {
@@ -70,6 +70,9 @@ void enterHomingState() {
 }
 
 void updateHomingState() {
+  // Update home switch sensor for proper debouncing
+  updateHomeSwitch();
+  
   //! ************************************************************************
   //! TIMEOUT DETECTION
   //! ************************************************************************
