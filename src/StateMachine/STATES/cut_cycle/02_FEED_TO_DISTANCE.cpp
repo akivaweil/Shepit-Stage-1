@@ -61,24 +61,28 @@ void enterFeedToDistanceState() {
     return;
   }
   
-  if (feedMotor && isCutMotorHomed()) {
-    feedMotor->setSpeedInHz(feedMotorSpeed);
-    feedMotor->setAcceleration(feedMotorAcceleration);
-    feedMotor->runForward();
-    
-    feedStartTime = millis();
-    feedMotorRunning = true;
-    
-    if (!feedMotor->isRunning()) {
-      feedToDistanceExitCondition = true;
-      return;
-    }
-  } else if (!isCutMotorHomed()) {
+  if (!isCutMotorHomed()) {
     Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
     setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
     transitionToState(STATE_HOMING);
     return;
-  } else {
+  }
+  
+  if (!feedMotor) {
+    Serial.println("ERROR: Feed motor not available");
+    feedToDistanceExitCondition = true;
+    return;
+  }
+  
+  feedMotor->setSpeedInHz(feedMotorSpeed);
+  feedMotor->setAcceleration(feedMotorAcceleration);
+  feedMotor->runForward();
+  
+  feedStartTime = millis();
+  feedMotorRunning = true;
+  
+  if (!feedMotor->isRunning()) {
+    Serial.println("ERROR: Feed motor failed to start");
     feedToDistanceExitCondition = true;
     return;
   }
@@ -133,17 +137,21 @@ void updateFeedToDistanceState() {
         woodSensorDeactivated = false;
         woodWasPresentAtStart = true;
         
-        if (feedMotor && isCutMotorHomed()) {
+        if (!isCutMotorHomed()) {
+          Serial.println("ERROR: Cut motor not homed - auto-homing before restarting feed operation");
+          setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
+          transitionToState(STATE_HOMING);
+          return;
+        }
+        
+        if (feedMotor) {
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
           feedMotor->runForward();
           feedStartTime = millis();
           feedMotorRunning = true;
-        } else if (!isCutMotorHomed()) {
-          Serial.println("ERROR: Cut motor not homed - auto-homing before restarting feed operation");
-          setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
-          transitionToState(STATE_HOMING);
-          return;
+        } else {
+          Serial.println("ERROR: Feed motor not available for restart");
         }
       }
     }
