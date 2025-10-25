@@ -120,6 +120,7 @@ void updateCheckConditionsStep() {
   bool runCycleStillActive = isRunCycleSwitchActive();
   
   if (woodStillPresent && runCycleStillActive) {
+    setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
     transitionToState(STATE_HOMING);
   } else if (woodStillPresent && !runCycleStillActive) {
     transitionToState(STATE_IDLE);

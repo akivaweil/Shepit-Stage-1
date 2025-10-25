@@ -111,6 +111,8 @@ void setFeedMotorTimeoutLocked(bool locked);
 void setCutMotorHomed(bool homed);
 bool isCutMotorHomed();
 void resetCutMotorHomed();
+void setReturnStateAfterHoming(SystemState state);
+SystemState getReturnStateAfterHoming();
 
 // Startup safety functions
 void resetStartupSafety();

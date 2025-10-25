@@ -41,7 +41,7 @@ void updateHomingState() {
     }
     homingMotorMoving = false;
     setCutMotorHomed(true); // Mark cut motor as homed for safety
-    transitionToState(STATE_FEED_TO_DISTANCE);
+    transitionToState(getReturnStateAfterHoming());
   }
 }
 

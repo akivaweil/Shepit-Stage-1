@@ -37,6 +37,7 @@ bool feedMotorTimeoutLocked = false;
 
 // Cut motor homing safety - prevents feed motor operation if cut motor not homed
 bool cutMotorHomed = false;
+SystemState returnStateAfterHoming = STATE_IDLE;
 
 //* ************************************************************************
 //* *********************** STARTUP SAFETY FUNCTIONS **********************
@@ -68,6 +69,14 @@ bool isCutMotorHomed() {
 
 void resetCutMotorHomed() {
   cutMotorHomed = false;
+}
+
+void setReturnStateAfterHoming(SystemState state) {
+  returnStateAfterHoming = state;
+}
+
+SystemState getReturnStateAfterHoming() {
+  return returnStateAfterHoming;
 }
 
 //* ************************************************************************

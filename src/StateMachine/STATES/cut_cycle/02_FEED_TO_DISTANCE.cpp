@@ -74,8 +74,9 @@ void enterFeedToDistanceState() {
       return;
     }
   } else if (!isCutMotorHomed()) {
-    Serial.println("ERROR: Cut motor not homed - cannot start feed operation");
-    feedToDistanceExitCondition = true;
+    Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
+    setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
+    transitionToState(STATE_HOMING);
     return;
   } else {
     feedToDistanceExitCondition = true;
@@ -139,8 +140,9 @@ void updateFeedToDistanceState() {
           feedStartTime = millis();
           feedMotorRunning = true;
         } else if (!isCutMotorHomed()) {
-          Serial.println("ERROR: Cut motor not homed - cannot restart feed operation");
-          feedToDistanceExitCondition = true;
+          Serial.println("ERROR: Cut motor not homed - auto-homing before restarting feed operation");
+          setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
+          transitionToState(STATE_HOMING);
           return;
         }
       }

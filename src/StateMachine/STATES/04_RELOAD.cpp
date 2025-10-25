@@ -39,8 +39,9 @@ void enterReloadState() {
     reloadMotorMoving = true;
     reloadStartTime = millis();
   } else if (!isCutMotorHomed()) {
-    Serial.println("ERROR: Cut motor not homed - cannot start reload operation");
-    transitionToState(STATE_IDLE);
+    Serial.println("ERROR: Cut motor not homed - auto-homing before reload operation");
+    setReturnStateAfterHoming(STATE_RELOAD);
+    transitionToState(STATE_HOMING);
     return;
   }
 }
