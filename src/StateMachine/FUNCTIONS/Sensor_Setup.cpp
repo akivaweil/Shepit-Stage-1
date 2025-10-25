@@ -15,7 +15,6 @@ Bounce2::Button woodPresenceSensor = Bounce2::Button();
 Bounce2::Button runCycleSwitch = Bounce2::Button();
 Bounce2::Button reloadSwitch = Bounce2::Button();
 Bounce2::Button redButton = Bounce2::Button();
-Bounce2::Button homeSwitch = Bounce2::Button();
 
 
 
@@ -75,14 +74,12 @@ void initializeRedButton() {
   Serial.println("Init: Red button");
 }
 
-void initializeHomeSwitch() {
-  // Initialize home switch with proper debouncing
-  pinMode(HOME_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown (active HIGH)
-  homeSwitch.attach(HOME_SWITCH_PIN, INPUT);
-  homeSwitch.interval(sensorDebounceTime); // Standard sensor debounce
+void initializeCutMotorHomeSwitch() {
+  // Initialize cut motor home switch with direct digital reading (no debouncing)
+  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown (active HIGH)
   
   // Minimal log
-  Serial.println("Init: Home switch");
+  Serial.println("Init: Cut motor home switch (direct reading)");
 }
 
 void initializeAllSensors() {
@@ -103,7 +100,7 @@ void initializeAllSensors() {
   
   initializeRedButton();
   
-  initializeHomeSwitch();
+  initializeCutMotorHomeSwitch();
   
   Serial.println("Sensors initialized");
 }
@@ -136,9 +133,7 @@ void updateRedButton() {
   redButton.update();
 }
 
-void updateHomeSwitch() {
-  homeSwitch.update();
-}
+// Cut motor home switch now uses direct digital reading - no update function needed
 
 void updateAllSensors() {
   // Update all sensors at once
@@ -147,7 +142,7 @@ void updateAllSensors() {
   updateRunCycleSwitch();
   updateReloadSwitch();
   updateRedButton();
-  updateHomeSwitch();
+  // Cut motor home switch now uses direct digital reading - no update needed
 }
 
 //* ************************************************************************
@@ -180,10 +175,10 @@ bool isRedButtonPressed() {
   return redButton.read() == HIGH;
 }
 
-bool isHomeSwitchTriggered() {
-  // Home switch is active HIGH - returns true when at home position
-  // Use debounced reading for reliable detection
-  return homeSwitch.read() == HIGH;
+bool isCutMotorHomeSwitchTriggered() {
+  // Cut motor home switch is active HIGH - returns true when at home position
+  // Use direct digital reading (no debouncing)
+  return digitalRead(CUT_MOTOR_HOME_SWITCH_PIN) == HIGH;
 }
 
 //* ************************************************************************
@@ -222,10 +217,9 @@ void resetRedButton() {
   redButton.interval(sensorDebounceTime);
 }
 
-void resetHomeSwitch() {
-  // Bounce2 doesn't have a reset method, just reinitialize
-  homeSwitch.attach(HOME_SWITCH_PIN, INPUT);
-  homeSwitch.interval(sensorDebounceTime);
+void resetCutMotorHomeSwitch() {
+  // Cut motor home switch uses direct digital reading - just reinitialize pin mode
+  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT_PULLDOWN);
 }
 
 void resetAllSensors() {
@@ -235,5 +229,5 @@ void resetAllSensors() {
   resetRunCycleSwitch();
   resetReloadSwitch();
   resetRedButton();
-  resetHomeSwitch();
+  resetCutMotorHomeSwitch();
 }

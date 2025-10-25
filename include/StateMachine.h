@@ -148,7 +148,7 @@ void initializeWoodPresenceSensor();
 void initializeRunCycleSwitch();
 void initializeReloadSwitch();
 void initializeRedButton();
-void initializeHomeSwitch();
+void initializeCutMotorHomeSwitch();
 void initializeAllSensors();
 
 // Sensor update functions
@@ -157,7 +157,7 @@ void updateWoodPresenceSensor();
 void updateRunCycleSwitch();
 void updateReloadSwitch();
 void updateRedButton();
-void updateHomeSwitch();
+void updateCutMotorHomeSwitch();
 void updateAllSensors();
 
 // Sensor read functions
@@ -167,7 +167,7 @@ bool isRunCycleSwitchActive();
 bool isRunCycleSwitchActiveCentralized();
 bool isReloadSwitchActive();
 bool isRedButtonPressed();
-bool isHomeSwitchTriggered();
+bool isCutMotorHomeSwitchTriggered();
 
 // Sensor reset functions
 void resetFeedDistanceSensor();
@@ -175,7 +175,7 @@ void resetWoodPresenceSensor();
 void resetRunCycleSwitch();
 void resetReloadSwitch();
 void resetRedButton();
-void resetHomeSwitch();
+void resetCutMotorHomeSwitch();
 void resetAllSensors();
 
 // External references to sensor objects
@@ -184,7 +184,7 @@ extern Bounce2::Button woodPresenceSensor;
 extern Bounce2::Button runCycleSwitch;
 extern Bounce2::Button reloadSwitch;
 extern Bounce2::Button redButton;
-extern Bounce2::Button homeSwitch;
+// Cut motor home switch now uses direct digital reading - no Bounce2 object needed
 
 // Continuous feed functions
 void startContinuousFeed();

@@ -21,10 +21,10 @@ void enterHomingState() {
   enableAllMotors();
   
   Serial.println("Starting cut motor homing sequence");
-  Serial.println("Home switch status: " + String(isHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+  Serial.println("Cut motor home switch status: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
   
-  // Always start cut motor moving backward toward home switch
-  // This ensures the home switch is pressed before proceeding
+  // Always start cut motor moving backward toward cut motor home switch
+  // This ensures the cut motor home switch is pressed before proceeding
   if (cutMotor) {
     cutMotor->setSpeedInHz(HOMING_SPEED);
     cutMotor->setAcceleration(HOMING_ACCELERATION);
@@ -38,12 +38,12 @@ void enterHomingState() {
 
 void updateHomingState() {
   //! ************************************************************************
-  //! CHECK FOR HOME SWITCH TRIGGER
+  //! CHECK FOR CUT MOTOR HOME SWITCH TRIGGER
   //! ************************************************************************
   if (homingMotorMoving) {
-    // Check home switch more aggressively
-    if (isHomeSwitchTriggered()) {
-      Serial.println("Home switch triggered - stopping cut motor");
+    // Check cut motor home switch more aggressively
+    if (isCutMotorHomeSwitchTriggered()) {
+      Serial.println("Cut motor home switch triggered - stopping cut motor");
       if (cutMotor && cutMotor->isRunning()) {
         cutMotor->forceStop();
         // Wait a moment to ensure motor stops
