@@ -182,8 +182,8 @@ bool isRedButtonPressed() {
 
 bool isHomeSwitchTriggered() {
   // Home switch is active HIGH - returns true when at home position
-  // Reading pin directly without debounce for instant detection
-  return digitalRead(HOME_SWITCH_PIN) == HIGH;
+  // Use debounced reading for reliable detection
+  return homeSwitch.read() == HIGH;
 }
 
 //* ************************************************************************
