@@ -30,6 +30,9 @@ void enterIdleState() {
   enableAllMotors();
   resetMotorTimeout();
   
+  // Reset cut motor homed flag for safety
+  resetCutMotorHomed();
+  
   feedMotorShouldRun = false;
   feedMotorWasRunning = false;
   lastFeedMotorStateChange = 0;
@@ -158,7 +161,11 @@ void updateIdleState() {
           
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
-          feedMotor->runForward();
+          if (isCutMotorHomed()) {
+            feedMotor->runForward();
+          } else {
+            Serial.println("ERROR: Cut motor not homed - feed motor disabled for safety");
+          }
           
           if (currentSystemState != STATE_RELOAD) {
             feedMotorStartTime = millis();

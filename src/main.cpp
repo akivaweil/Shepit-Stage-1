@@ -81,17 +81,21 @@ void processSerialCommand(String command) {
   
   // Feed motor movement commands
   else if (command == "feedforward") {
-    if (feedMotor) {
+    if (feedMotor && isCutMotorHomed()) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor: moving forward");
+    } else if (!isCutMotorHomed()) {
+      Serial.println("ERROR: Cut motor not homed - feed motor disabled for safety");
     }
   }
   else if (command == "feedbackward") {
-    if (feedMotor) {
+    if (feedMotor && isCutMotorHomed()) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor: moving backward");
+    } else if (!isCutMotorHomed()) {
+      Serial.println("ERROR: Cut motor not homed - feed motor disabled for safety");
     }
   }
   else if (command == "feedstop") {
@@ -125,10 +129,12 @@ void processSerialCommand(String command) {
   else if (command.startsWith("feed")) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
-    if (feedMotor && steps != 0) {
+    if (feedMotor && steps != 0 && isCutMotorHomed()) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
+    } else if (!isCutMotorHomed()) {
+      Serial.println("ERROR: Cut motor not homed - feed motor disabled for safety");
     }
   }
   else if (command.startsWith("cut")) {

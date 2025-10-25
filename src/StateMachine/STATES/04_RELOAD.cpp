@@ -30,7 +30,7 @@ void enterReloadState() {
   
   retractForwardClamp();
   
-  if (feedMotor) {
+  if (feedMotor && isCutMotorHomed()) {
     int32_t initialPosition = feedMotor->getCurrentPosition();
     
     feedMotor->setSpeedInHz(feedMotorSpeed);
@@ -38,6 +38,10 @@ void enterReloadState() {
     feedMotor->move(-RELOAD_STEPS);
     reloadMotorMoving = true;
     reloadStartTime = millis();
+  } else if (!isCutMotorHomed()) {
+    Serial.println("ERROR: Cut motor not homed - cannot start reload operation");
+    transitionToState(STATE_IDLE);
+    return;
   }
 }
 

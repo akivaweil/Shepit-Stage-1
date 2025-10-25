@@ -61,7 +61,7 @@ void enterFeedToDistanceState() {
     return;
   }
   
-  if (feedMotor) {
+  if (feedMotor && isCutMotorHomed()) {
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
     feedMotor->runForward();
@@ -73,6 +73,10 @@ void enterFeedToDistanceState() {
       feedToDistanceExitCondition = true;
       return;
     }
+  } else if (!isCutMotorHomed()) {
+    Serial.println("ERROR: Cut motor not homed - cannot start feed operation");
+    feedToDistanceExitCondition = true;
+    return;
   } else {
     feedToDistanceExitCondition = true;
     return;
@@ -128,12 +132,16 @@ void updateFeedToDistanceState() {
         woodSensorDeactivated = false;
         woodWasPresentAtStart = true;
         
-        if (feedMotor) {
+        if (feedMotor && isCutMotorHomed()) {
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
           feedMotor->runForward();
           feedStartTime = millis();
           feedMotorRunning = true;
+        } else if (!isCutMotorHomed()) {
+          Serial.println("ERROR: Cut motor not homed - cannot restart feed operation");
+          feedToDistanceExitCondition = true;
+          return;
         }
       }
     }

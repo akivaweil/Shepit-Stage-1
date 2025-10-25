@@ -35,6 +35,9 @@ const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent acc
 // Feed motor timeout lock - prevents restart after timeout until manually reset
 bool feedMotorTimeoutLocked = false;
 
+// Cut motor homing safety - prevents feed motor operation if cut motor not homed
+bool cutMotorHomed = false;
+
 //* ************************************************************************
 //* *********************** STARTUP SAFETY FUNCTIONS **********************
 //* ************************************************************************
@@ -49,6 +52,22 @@ void resetStartupSafety() {
 
 bool isStartupSafetyResetRequired() {
   return startupSafetyResetRequired;
+}
+
+//* ************************************************************************
+//* *********************** CUT MOTOR HOMING SAFETY **********************
+//* ************************************************************************
+
+void setCutMotorHomed(bool homed) {
+  cutMotorHomed = homed;
+}
+
+bool isCutMotorHomed() {
+  return cutMotorHomed;
+}
+
+void resetCutMotorHomed() {
+  cutMotorHomed = false;
 }
 
 //* ************************************************************************
@@ -289,6 +308,9 @@ void handleEmergencyStop() {
   // Stop all motors immediately
   if (feedMotor) feedMotor->forceStop();
   if (cutMotor) cutMotor->forceStop();
+  
+  // Reset cut motor homed flag for safety
+  resetCutMotorHomed();
   
   // Set emergency stop flag
   emergencyStopRequested = true;

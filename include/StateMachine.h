@@ -107,6 +107,11 @@ void resetFeedMotorTimeoutLock();
 bool isFeedMotorTimeoutLocked();
 void setFeedMotorTimeoutLocked(bool locked);
 
+// Cut motor homing safety functions
+void setCutMotorHomed(bool homed);
+bool isCutMotorHomed();
+void resetCutMotorHomed();
+
 // Startup safety functions
 void resetStartupSafety();
 bool isStartupSafetyResetRequired();
