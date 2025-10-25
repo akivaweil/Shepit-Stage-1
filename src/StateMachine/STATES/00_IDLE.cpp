@@ -30,8 +30,8 @@ void enterIdleState() {
   enableAllMotors();
   resetMotorTimeout();
   
-  // Reset cut motor homed flag for safety
-  resetCutMotorHomed();
+  // Note: Cut motor homed flag is NOT reset here to prevent double homing
+  // The homed flag should only be reset during explicit system reset or new homing sequence
   
   feedMotorShouldRun = false;
   feedMotorWasRunning = false;
