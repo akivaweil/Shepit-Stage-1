@@ -61,8 +61,8 @@ void resetMotorTimeout() {
 
 void enableAllMotors() {
   if (!motorsEnabled) {
-    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
-    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable - enable feed motor
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable - ensure cut motor is enabled
     motorsEnabled = true;
   }
   resetMotorTimeout();
@@ -70,8 +70,8 @@ void enableAllMotors() {
 
 void enableAllMotorsWithDelay() {
   if (!motorsEnabled) {
-    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
-    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable - enable feed motor
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable - ensure cut motor is enabled
     motorsEnabled = true;
     waitingForMotorEnable = true;
     motorEnableStartTime = millis();
@@ -92,10 +92,10 @@ bool isMotorEnableDelayComplete() {
 
 void disableAllMotorsAfterDelay() {
   if (motorsEnabled) {
-    digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable
-    digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
+    digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable - disable feed motor
+    // Cut motor is NEVER disabled - always enabled
     motorsEnabled = false;
-    Serial.println("Sleep mode: motors disabled (3 second timeout)");
+    Serial.println("Sleep mode: feed motor disabled (cut motor always enabled)");
   }
 }
 
@@ -131,7 +131,8 @@ void enableCutMotor() {
 }
 
 void disableCutMotor() {
-  digitalWrite(CUT_MOTOR_ENABLE_PIN, HIGH);  // Active low enable
+  // Cut motor is NEVER disabled - always keep it enabled
+  digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);  // Active low enable - keep cut motor enabled
 }
 
 //* ************************************************************************

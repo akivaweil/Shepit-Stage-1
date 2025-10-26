@@ -56,17 +56,9 @@ void processSerialCommand(String command) {
     disableFeedMotor();
     Serial.println("Feed motor disabled");
   }
-  else if (command == "enablecut") {
+  else if (command == "enablefeed") {
     enableAllMotors();
-    Serial.println("Cut motor enabled (sleep mode after 3 seconds)");
-  }
-  else if (command == "disablecut") {
-    disableCutMotor();
-    Serial.println("Cut motor disabled");
-  }
-  else if (command == "disableall") {
-    disableAllMotorsAfterDelay();
-    Serial.println("All motors disabled");
+    Serial.println("Feed motor enabled (cut motor always enabled)");
   }
   
   // Pneumatic clamp commands
