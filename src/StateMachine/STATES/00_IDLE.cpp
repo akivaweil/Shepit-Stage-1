@@ -99,19 +99,7 @@ void updateIdleState() {
   }
   
   // Update feed motor should-run state
-  if (newFeedMotorShouldRun != feedMotorShouldRun) {
-    feedMotorShouldRun = newFeedMotorShouldRun;
-    feedMotorWasRunning = !feedMotorShouldRun;
-  }
-  
-  // Force motor state update when conditions change
-  static bool lastConditions = false;
-  bool currentConditions = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
-  
-  if (currentConditions != lastConditions) {
-    feedMotorWasRunning = !currentConditions;
-    lastConditions = currentConditions;
-  }
+  feedMotorShouldRun = newFeedMotorShouldRun;
   
   // Check for cycle switch state changes
   static bool lastRunCycleState = false;
@@ -122,15 +110,12 @@ void updateIdleState() {
         feedMotorTimeoutOccurred = false;
         wasLockedWhenSwitchOff = false;
       }
-      feedMotorWasRunning = false;
     } else {
       if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
-        feedMotorWasRunning = false;
         feedMotorTimeoutOccurred = false;
       }
       feedMotorShouldRun = false;
-      feedMotorWasRunning = false;
     }
     lastRunCycleState = runCycleActive;
   }
