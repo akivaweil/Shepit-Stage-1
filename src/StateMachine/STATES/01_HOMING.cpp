@@ -51,9 +51,9 @@ void updateHomingState() {
   //! ************************************************************************
   if (offsettingAfterHoming) {
     if (cutMotor && !cutMotor->isRunning()) {
-      Serial.println("Cut motor offset complete - transitioning to FEED_TO_DISTANCE");
+      Serial.println("Cut motor offset complete - transitioning to LOAD");
       offsettingAfterHoming = false;
-      transitionToState(STATE_FEED_TO_DISTANCE);
+      transitionToState(STATE_LOAD);
     }
     return;
   }

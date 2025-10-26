@@ -9,7 +9,7 @@ extern FastAccelStepper *cutMotor;
 // Include state implementations
 #include "../STATES/00_IDLE.cpp"
 #include "../STATES/01_HOMING.cpp"
-#include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
+#include "../STATES/cut_cycle/02_LOAD.cpp"
 #include "../STATES/cut_cycle/03_CUTTING.cpp"
 #include "../STATES/04_UNLOAD.cpp"
 
@@ -257,7 +257,7 @@ String getCurrentStateName() {
   switch (currentSystemState) {
     case STATE_IDLE: return "IDLE";
     case STATE_HOMING: return "HOMING";
-    case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
+    case STATE_LOAD: return "LOAD";
     case STATE_CUTTING: return "CUTTING";
     case STATE_UNLOAD: return "UNLOAD";
     default: return "UNKNOWN";
@@ -274,7 +274,7 @@ bool isSystemIdle() {
 
 bool isSystemBusy() {
   return (currentSystemState == STATE_HOMING ||
-          currentSystemState == STATE_FEED_TO_DISTANCE ||
+          currentSystemState == STATE_LOAD ||
           currentSystemState == STATE_CUTTING ||
           currentSystemState == STATE_UNLOAD);
 }
@@ -312,7 +312,7 @@ void transitionToState(SystemState newState) {
     case STATE_HOMING:
       exitHomingState();
       break;
-    case STATE_FEED_TO_DISTANCE:
+    case STATE_LOAD:
       // Exit handled by enter function
       break;
     case STATE_CUTTING:
@@ -335,8 +335,8 @@ void transitionToState(SystemState newState) {
     case STATE_HOMING:
       enterHomingState();
       break;
-    case STATE_FEED_TO_DISTANCE:
-      enterFeedToDistanceState();
+    case STATE_LOAD:
+      enterLoadState();
       break;
     case STATE_CUTTING:
       enterCuttingState();
@@ -359,8 +359,8 @@ void updateStateMachine() {
     case STATE_HOMING:
       updateHomingState();
       break;
-    case STATE_FEED_TO_DISTANCE:
-      updateFeedToDistanceState();
+    case STATE_LOAD:
+      updateLoadState();
       break;
     case STATE_CUTTING:
       updateCuttingState();
@@ -414,7 +414,7 @@ void initializeStateMachine() {
 // State implementations are in the States folder:
 // - 00_IDLE.cpp
 // - 01_HOMING.cpp
-// - 02_FEED_TO_DISTANCE.cpp
+// - 02_LOAD.cpp
 // - 03_CUTTING.cpp
 // - 04_UNLOAD.cpp
 

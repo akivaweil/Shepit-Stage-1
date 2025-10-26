@@ -13,7 +13,7 @@
 enum SystemState {
   STATE_IDLE = 0,
   STATE_HOMING = 1,
-  STATE_FEED_TO_DISTANCE = 2,
+  STATE_LOAD = 2,
   STATE_CUTTING = 3,
   STATE_UNLOAD = 4
 };
@@ -199,9 +199,9 @@ void enterHomingState();
 void updateHomingState();
 void exitHomingState();
 
-void enterFeedToDistanceState();
-void updateFeedToDistanceState();
-void exitFeedToDistanceState();
+void enterLoadState();
+void updateLoadState();
+void exitLoadState();
 
 void enterCuttingState();
 void updateCuttingState();

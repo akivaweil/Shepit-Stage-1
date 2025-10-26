@@ -3,7 +3,7 @@
 #include "Pins_Definitions.h"
 
 //* ************************************************************************
-//* ************************ FEED TO DISTANCE STATE ************************
+//* ************************ LOAD STATE ************************
 //* ************************************************************************
 
 // State-specific variables
@@ -12,7 +12,7 @@ static unsigned long sensorTriggerTime = 0;
 static bool distanceSensorTriggered = false;
 static bool delayTimerStarted = false;
 static bool feedMotorRunning = false;
-static bool feedToDistanceExitCondition = false;
+static bool loadExitCondition = false;
 static bool timeoutOccurred = false;
 static bool woodWasPresentAtStart = false;
 static bool waitingForWoodReset = false;
@@ -21,13 +21,13 @@ static bool woodSensorDeactivated = false;
 // Automatic unload constants
 static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;
 
-void enterFeedToDistanceState() {
+void enterLoadState() {
   feedStartTime = 0;
   sensorTriggerTime = 0;
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
-  feedToDistanceExitCondition = false;
+  loadExitCondition = false;
   timeoutOccurred = false;
   woodWasPresentAtStart = false;
   waitingForWoodReset = false;
@@ -37,12 +37,12 @@ void enterFeedToDistanceState() {
   resetFeedMotorFlags();
   
   if (!isRunCycleSwitchActive()) {
-    feedToDistanceExitCondition = true;
+    loadExitCondition = true;
     return;
   }
   
   if (!isWoodPresent()) {
-    feedToDistanceExitCondition = true;
+    loadExitCondition = true;
     return;
   }
   
@@ -57,13 +57,13 @@ void enterFeedToDistanceState() {
   }
   
   if (feedMotorSpeed <= 0 || feedMotorAcceleration <= 0) {
-    feedToDistanceExitCondition = true;
+    loadExitCondition = true;
     return;
   }
   
   if (!feedMotor) {
     Serial.println("ERROR: Feed motor not available");
-    feedToDistanceExitCondition = true;
+    loadExitCondition = true;
     return;
   }
   
@@ -76,12 +76,12 @@ void enterFeedToDistanceState() {
   
   if (!feedMotor->isRunning()) {
     Serial.println("ERROR: Feed motor failed to start");
-    feedToDistanceExitCondition = true;
+    loadExitCondition = true;
     return;
   }
 }
 
-void updateFeedToDistanceState() {
+void updateLoadState() {
   if (!isRunCycleSwitchActive()) {
     emergencyStopFeedOperation();
     return;
@@ -169,13 +169,13 @@ void updateFeedToDistanceState() {
   }
   
   // Delay completion processing
-  if (delayTimerStarted && !feedToDistanceExitCondition && !timeoutOccurred) {
+  if (delayTimerStarted && !loadExitCondition && !timeoutOccurred) {
     if (millis() - sensorTriggerTime >= woodDistanceDelay) {
       if (isRunCycleSwitchActive() && isWoodPresent()) {
         transitionToState(STATE_CUTTING);
         return;
       } else {
-        feedToDistanceExitCondition = true;
+        loadExitCondition = true;
         emergencyStopFeedOperation();
         return;
       }
@@ -187,7 +187,7 @@ void updateFeedToDistanceState() {
     feedMotor->forceStop();
     
     if (feedMotor->isRunning()) {
-      feedToDistanceExitCondition = true;
+      loadExitCondition = true;
       emergencyStopFeedOperation();
       return;
     }
@@ -205,13 +205,13 @@ void emergencyStopFeedOperation() {
   transitionToState(STATE_IDLE);
 }
 
-void exitFeedToDistanceState() {
+void exitLoadState() {
   feedStartTime = 0;
   sensorTriggerTime = 0;
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
-  feedToDistanceExitCondition = false;
+  loadExitCondition = false;
   timeoutOccurred = false;
   woodWasPresentAtStart = false;
   waitingForWoodReset = false;
@@ -223,3 +223,4 @@ void exitFeedToDistanceState() {
     timeoutOccurred = false;
   }
 }
+
