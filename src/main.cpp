@@ -81,25 +81,17 @@ void processSerialCommand(String command) {
   
   // Feed motor movement commands
   else if (command == "feedforward") {
-    if (feedMotor && isCutMotorHomed()) {
+    if (feedMotor) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(feedMotorSteps);
       Serial.println("Feed motor: moving forward");
-    } else if (!isCutMotorHomed()) {
-      Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
-      setReturnStateAfterHoming(STATE_IDLE);
-      transitionToState(STATE_HOMING);
     }
   }
   else if (command == "feedbackward") {
-    if (feedMotor && isCutMotorHomed()) {
+    if (feedMotor) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(-feedMotorSteps);
       Serial.println("Feed motor: moving backward");
-    } else if (!isCutMotorHomed()) {
-      Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
-      setReturnStateAfterHoming(STATE_IDLE);
-      transitionToState(STATE_HOMING);
     }
   }
   else if (command == "feedstop") {
@@ -133,14 +125,10 @@ void processSerialCommand(String command) {
   else if (command.startsWith("feed")) {
     String stepStr = command.substring(4);
     float steps = stepStr.toFloat();
-    if (feedMotor && steps != 0 && isCutMotorHomed()) {
+    if (feedMotor && steps != 0) {
       retractForwardClamp(); // Retract forward clamp before feed motor movement
       feedMotor->move(steps);
       Serial.println("Feed motor moving " + String(steps) + " steps");
-    } else if (!isCutMotorHomed()) {
-      Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
-      setReturnStateAfterHoming(STATE_IDLE);
-      transitionToState(STATE_HOMING);
     }
   }
   else if (command.startsWith("cut")) {
@@ -203,7 +191,6 @@ void processSerialCommand(String command) {
       // Check if run cycle switch is active and wood is present before starting
       if (isRunCycleSwitchActive() && isWoodPresent()) {
         Serial.println("Starting manual sequence - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED");
-        setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
         transitionToState(STATE_HOMING);
       } else if (!isRunCycleSwitchActive()) {
         Serial.println("Cannot start sequence - RUN CYCLE SWITCH NOT ACTIVE");
@@ -426,7 +413,6 @@ void loop() {
         Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH ACTIVE & WOOD DETECTED - STARTING HOMING SEQUENCE ***");
         cycleStartTime = millis();
         emergencyStopRequested = false;
-        setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
         transitionToState(STATE_HOMING);
       } else if (!isRunCycleSwitchActive()) {
         Serial.println("*** BUTTON PRESSED - RUN CYCLE SWITCH NOT ACTIVE - Cannot start cutting cycle ***");

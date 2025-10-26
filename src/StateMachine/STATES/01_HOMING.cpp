@@ -26,7 +26,6 @@ void enterHomingState() {
   Serial.println("Motors enabled status after enableAllMotors(): " + String(motorsEnabled ? "ENABLED" : "DISABLED"));
   
   Serial.println("Cut motor home switch status: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
-  Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
   
   // Always start cut motor moving backward toward cut motor home switch
   // This ensures the cut motor home switch is pressed before proceeding
@@ -60,12 +59,8 @@ void updateHomingState() {
         Serial.println("Cut motor stopped and position set to 0");
       }
       homingMotorMoving = false;
-      setCutMotorHomed(true); // Mark cut motor as homed for safety
-      Serial.println("Cut motor homed flag set to TRUE");
-      SystemState returnState = getReturnStateAfterHoming();
-      Serial.println("Return state after homing: " + String(returnState));
-      Serial.println("Transitioning to return state...");
-      transitionToState(returnState);
+      Serial.println("Cut motor homed - transitioning to FEED_TO_DISTANCE");
+      transitionToState(STATE_FEED_TO_DISTANCE);
     }
   } else {
     // Add periodic status update if motor should be moving but isn't

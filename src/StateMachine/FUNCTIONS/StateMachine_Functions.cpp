@@ -35,10 +35,6 @@ const unsigned long EMERGENCY_STOP_DELAY_MS = 300; // 300ms delay to prevent acc
 // Feed motor timeout lock - prevents restart after timeout until manually reset
 bool feedMotorTimeoutLocked = false;
 
-// Cut motor homing safety - prevents feed motor operation if cut motor not homed
-bool cutMotorHomed = false;
-SystemState returnStateAfterHoming = STATE_IDLE;
-
 //* ************************************************************************
 //* *********************** STARTUP SAFETY FUNCTIONS **********************
 //* ************************************************************************
@@ -53,30 +49,6 @@ void resetStartupSafety() {
 
 bool isStartupSafetyResetRequired() {
   return startupSafetyResetRequired;
-}
-
-//* ************************************************************************
-//* *********************** CUT MOTOR HOMING SAFETY **********************
-//* ************************************************************************
-
-void setCutMotorHomed(bool homed) {
-  cutMotorHomed = homed;
-}
-
-bool isCutMotorHomed() {
-  return cutMotorHomed;
-}
-
-void resetCutMotorHomed() {
-  cutMotorHomed = false;
-}
-
-void setReturnStateAfterHoming(SystemState state) {
-  returnStateAfterHoming = state;
-}
-
-SystemState getReturnStateAfterHoming() {
-  return returnStateAfterHoming;
 }
 
 //* ************************************************************************
@@ -216,19 +188,6 @@ bool isRunCycleSwitchActive() {
 
 void startContinuousFeed() {
   if (feedMotor) {
-    // Check if cut motor is homed before allowing feed motor movement
-    if (!isCutMotorHomed()) {
-      Serial.println("=== CONTINUOUS FEED BLOCKED ===");
-      Serial.println("ERROR: Cut motor not homed - auto-homing before continuous feed operation");
-      Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
-      Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
-      Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
-      Serial.println("Setting return state to IDLE and transitioning to HOMING...");
-      setReturnStateAfterHoming(STATE_IDLE);
-      transitionToState(STATE_HOMING);
-      return;
-    }
-    
     // Explicitly enable motors if they're disabled (wake from sleep mode)
     if (!motorsEnabled) {
       enableAllMotors();
@@ -330,9 +289,6 @@ void handleEmergencyStop() {
   // Stop all motors immediately
   if (feedMotor) feedMotor->forceStop();
   if (cutMotor) cutMotor->forceStop();
-  
-  // Reset cut motor homed flag for safety
-  resetCutMotorHomed();
   
   // Set emergency stop flag
   emergencyStopRequested = true;

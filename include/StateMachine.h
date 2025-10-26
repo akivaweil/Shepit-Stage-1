@@ -23,8 +23,6 @@ enum SystemEvent {
   EVENT_WOOD_DETECTED,
   EVENT_DISTANCE_SENSOR_TRIGGERED,
   EVENT_CUT_COMPLETE,
-  EVENT_EMERGENCY_STOP,
-  EVENT_MOTOR_TIMEOUT,
   EVENT_RELOAD_REQUESTED,
   EVENT_RUN_CYCLE_ACTIVATED,
   EVENT_RUN_CYCLE_DEACTIVATED
@@ -106,13 +104,6 @@ void disableCutMotor();
 void resetFeedMotorTimeoutLock();
 bool isFeedMotorTimeoutLocked();
 void setFeedMotorTimeoutLocked(bool locked);
-
-// Cut motor homing safety functions
-void setCutMotorHomed(bool homed);
-bool isCutMotorHomed();
-void resetCutMotorHomed();
-void setReturnStateAfterHoming(SystemState state);
-SystemState getReturnStateAfterHoming();
 
 // Startup safety functions
 void resetStartupSafety();

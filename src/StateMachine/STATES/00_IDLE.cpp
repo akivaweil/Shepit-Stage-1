@@ -66,7 +66,6 @@ void updateIdleState() {
     Serial.println("Distance sensor: " + String(distanceSensorTriggered ? "TRIGGERED" : "NOT TRIGGERED"));
     Serial.println("In cutting cycle: " + String(inCuttingCycle ? "YES" : "NO"));
     Serial.println("Feed motor timeout locked: " + String(isFeedMotorTimeoutLocked() ? "YES" : "NO"));
-    Serial.println("Cut motor homed: " + String(isCutMotorHomed() ? "YES" : "NO"));
     lastRunCycleActive = runCycleActive;
     lastWoodPresent = woodPresent;
   }
@@ -179,22 +178,11 @@ void updateIdleState() {
           
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
-          if (isCutMotorHomed()) {
-            Serial.println("Cut motor homed - starting feed motor forward");
-            feedMotor->runForward();
-            Serial.println("Feed motor runForward() called");
-            delay(50); // Small delay to let motor start
-            Serial.println("Feed motor isRunning check: " + String(feedMotor->isRunning() ? "TRUE" : "FALSE"));
-          } else {
-            Serial.println("=== FEED MOTOR START BLOCKED ===");
-            Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
-            Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
-            Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
-            Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
-            Serial.println("Setting return state to IDLE and transitioning to HOMING...");
-            setReturnStateAfterHoming(STATE_IDLE);
-            transitionToState(STATE_HOMING);
-          }
+          Serial.println("Starting feed motor forward");
+          feedMotor->runForward();
+          Serial.println("Feed motor runForward() called");
+          delay(50); // Small delay to let motor start
+          Serial.println("Feed motor isRunning check: " + String(feedMotor->isRunning() ? "TRUE" : "FALSE"));
           
           if (currentSystemState != STATE_RELOAD) {
             feedMotorStartTime = millis();

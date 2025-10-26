@@ -61,18 +61,6 @@ void enterFeedToDistanceState() {
     return;
   }
   
-  if (!isCutMotorHomed()) {
-    Serial.println("=== FEED_TO_DISTANCE STATE BLOCKED ===");
-    Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
-    Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
-    Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
-    Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
-    Serial.println("Setting return state to FEED_TO_DISTANCE and transitioning to HOMING...");
-    setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
-    transitionToState(STATE_HOMING);
-    return;
-  }
-  
   if (!feedMotor) {
     Serial.println("ERROR: Feed motor not available");
     feedToDistanceExitCondition = true;
@@ -141,13 +129,6 @@ void updateFeedToDistanceState() {
         waitingForWoodReset = false;
         woodSensorDeactivated = false;
         woodWasPresentAtStart = true;
-        
-        if (!isCutMotorHomed()) {
-          Serial.println("ERROR: Cut motor not homed - auto-homing before restarting feed operation");
-          setReturnStateAfterHoming(STATE_FEED_TO_DISTANCE);
-          transitionToState(STATE_HOMING);
-          return;
-        }
         
         if (feedMotor) {
           feedMotor->setSpeedInHz(feedMotorSpeed);
