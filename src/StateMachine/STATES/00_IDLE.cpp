@@ -142,6 +142,11 @@ void updateIdleState() {
     }
   }
   
+  // Detect when motor stops unexpectedly
+  if (feedMotorWasRunning && feedMotor && !feedMotor->isRunning()) {
+    feedMotorWasRunning = false;
+  }
+  
   // Control feed motor based on should-run state
   if (feedMotorShouldRun != feedMotorWasRunning) {
     Serial.println("=== FEED MOTOR STATE CHANGE ===");
