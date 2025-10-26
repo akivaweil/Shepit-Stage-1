@@ -25,6 +25,10 @@ static bool clampWasRetracted = false;
 static unsigned long lastClampStateChange = 0;
 static const unsigned long CLAMP_STATE_CHANGE_DELAY = 100;
 
+// Run cycle switch cycling requirement
+static bool runCycleSwitchCycled = false;
+static bool lastRunCycleSwitchState = false;
+
 void enterIdleState() {
   resetAllStateMachineFlags();
   enableAllMotors();
@@ -42,6 +46,10 @@ void enterIdleState() {
   clampShouldBeRetracted = false;
   clampWasRetracted = false;
   lastClampStateChange = 0;
+  
+  // Track run cycle switch state for cycling requirement
+  runCycleSwitchCycled = false;
+  lastRunCycleSwitchState = isRunCycleSwitchActive();
   
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
@@ -235,12 +243,26 @@ void updateIdleState() {
     }
   }
   
+  // Track run cycle switch cycling requirement
+  bool currentRunCycleSwitchState = runCycleActive;
+  if (currentRunCycleSwitchState != lastRunCycleSwitchState) {
+    if (!lastRunCycleSwitchState && currentRunCycleSwitchState) {
+      // Switch turned ON from OFF state - mark as cycled
+      runCycleSwitchCycled = true;
+    }
+    lastRunCycleSwitchState = currentRunCycleSwitchState;
+  }
+  
   // Distance sensor trigger for cutting cycle
-  if (distanceSensorTriggered && runCycleActive && woodPresent) {
+  // Only allow cutting cycle if run cycle switch has been cycled (off then on)
+  if (distanceSensorTriggered && runCycleActive && woodPresent && runCycleSwitchCycled) {
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
       feedMotorTimeoutOccurred = false;
     }
+    
+    // Reset cycling flag after starting cutting cycle
+    runCycleSwitchCycled = false;
     
     transitionToState(STATE_CUTTING);
     return;

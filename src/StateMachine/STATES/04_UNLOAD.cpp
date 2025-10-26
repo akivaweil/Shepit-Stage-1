@@ -9,6 +9,7 @@ extern FastAccelStepper *cutMotor;
 // Configuration
 static unsigned long unloadStartTime = 0;
 static bool unloadMotorMoving = false;
+static bool autoUnloadMode = false; // Flag to indicate automatic unload from cutting state
 
 void enterUnloadState() {
   if (isFeedMotorTimeoutLocked()) {
@@ -20,22 +21,37 @@ void enterUnloadState() {
   unloadStartTime = 0;
   unloadMotorMoving = false;
   
-  if (digitalRead(UNLOAD_SWITCH_PIN) != HIGH) {
-    transitionToState(STATE_IDLE);
-    return;
-  }
+  // Check if entering from unload switch or automatic from cutting state
+  bool unloadSwitchActive = digitalRead(UNLOAD_SWITCH_PIN) == HIGH;
   
-  enableAllMotors();
-  
-  retractForwardClamp();
-  
-  // Start continuous backward movement
-  if (feedMotor) {
-    feedMotor->setSpeedInHz(feedMotorSpeed);
-    feedMotor->setAcceleration(feedMotorAcceleration);
-    feedMotor->runBackward();
-    unloadMotorMoving = true;
-    unloadStartTime = millis();
+  if (unloadSwitchActive) {
+    // Manual unload via switch
+    autoUnloadMode = false;
+    enableAllMotors();
+    retractForwardClamp();
+    
+    // Start continuous backward movement
+    if (feedMotor) {
+      feedMotor->setSpeedInHz(feedMotorSpeed);
+      feedMotor->setAcceleration(feedMotorAcceleration);
+      feedMotor->runBackward();
+      unloadMotorMoving = true;
+      unloadStartTime = millis();
+    }
+  } else {
+    // Automatic unload triggered by wood absence during cutting
+    autoUnloadMode = true;
+    enableAllMotors();
+    retractForwardClamp();
+    
+    // Start continuous backward movement
+    if (feedMotor) {
+      feedMotor->setSpeedInHz(feedMotorSpeed);
+      feedMotor->setAcceleration(feedMotorAcceleration);
+      feedMotor->runBackward();
+      unloadMotorMoving = true;
+      unloadStartTime = millis();
+    }
   }
 }
 
@@ -43,23 +59,45 @@ void updateUnloadState() {
   // Reset motor timeout to keep motors enabled during unload
   resetMotorTimeout();
   
-  // Check if unload switch is turned off
-  bool unloadSwitchActive = digitalRead(UNLOAD_SWITCH_PIN) == HIGH;
-  
-  if (!unloadSwitchActive) {
-    if (feedMotor && feedMotor->isRunning()) {
-      feedMotor->forceStop();
-      unloadMotorMoving = false;
+  if (autoUnloadMode) {
+    // Automatic unload mode: run for 10 seconds then transition to IDLE
+    unsigned long elapsedTime = millis() - unloadStartTime;
+    
+    if (elapsedTime >= 10000) {
+      // 10 seconds elapsed, stop motor and transition to IDLE
+      if (feedMotor && feedMotor->isRunning()) {
+        feedMotor->forceStop();
+        unloadMotorMoving = false;
+      }
+      
+      extendForwardClamp();
+      transitionToState(STATE_IDLE);
+      return;
     }
     
-    extendForwardClamp();
-    transitionToState(STATE_IDLE);
-    return;
-  }
-  
-  // Keep motor running backward while switch is active
-  if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
-    feedMotor->runBackward();
+    // Keep motor running backward during the 10 second period
+    if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
+      feedMotor->runBackward();
+    }
+  } else {
+    // Manual unload mode: controlled by unload switch
+    bool unloadSwitchActive = digitalRead(UNLOAD_SWITCH_PIN) == HIGH;
+    
+    if (!unloadSwitchActive) {
+      if (feedMotor && feedMotor->isRunning()) {
+        feedMotor->forceStop();
+        unloadMotorMoving = false;
+      }
+      
+      extendForwardClamp();
+      transitionToState(STATE_IDLE);
+      return;
+    }
+    
+    // Keep motor running backward while switch is active
+    if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
+      feedMotor->runBackward();
+    }
   }
 }
 

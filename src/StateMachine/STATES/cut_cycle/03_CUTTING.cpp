@@ -67,6 +67,15 @@ void exitCuttingState() {
 
 // Step 1: Cut Wood
 void updateCutWoodStep() {
+  // Check if wood became absent during cutting
+  if (!isWoodPresent()) {
+    if (cutMotor) {
+      cutMotor->forceStop();
+    }
+    transitionToState(STATE_UNLOAD);
+    return;
+  }
+  
   if (!cutMotorStarted && cutMotor) {
     cutMotor->setSpeedInHz(cutMotorSpeed);
     cutMotor->setAcceleration(cutMotorAcceleration);
@@ -92,6 +101,15 @@ void updateCutWoodStep() {
 
 // Step 2: Return Cut Motor
 void updateReturnCutMotorStep() {
+  // Check if wood became absent during cutting
+  if (!isWoodPresent()) {
+    if (cutMotor) {
+      cutMotor->forceStop();
+    }
+    transitionToState(STATE_UNLOAD);
+    return;
+  }
+  
   if (!returnMotorStarted && cutMotor) {
     cutMotor->setSpeedInHz(cutMotorReturnSpeed);
     cutMotor->setAcceleration(cutMotorReturnAcceleration);
