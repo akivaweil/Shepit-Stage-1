@@ -160,19 +160,29 @@ void updateIdleState() {
   
   // Control feed motor based on should-run state
   if (feedMotorShouldRun != feedMotorWasRunning) {
+    Serial.println("=== FEED MOTOR STATE CHANGE ===");
+    Serial.println("feedMotorShouldRun: " + String(feedMotorShouldRun ? "TRUE" : "FALSE"));
+    Serial.println("feedMotorWasRunning: " + String(feedMotorWasRunning ? "TRUE" : "FALSE"));
+    Serial.println("Elapsed time: " + String(millis() - lastFeedMotorStateChange) + "ms");
+    
     if (millis() - lastFeedMotorStateChange >= FEED_MOTOR_STATE_CHANGE_DELAY) {
       lastFeedMotorStateChange = millis();
       
       if (feedMotorShouldRun) {
+        Serial.println("Attempting to start feed motor...");
         if (feedMotor && !feedMotor->isRunning()) {
+          Serial.println("Feed motor pointer valid and not running");
           if (!motorsEnabled) {
+            Serial.println("Motors disabled - enabling...");
             enableAllMotors();
           }
           
           feedMotor->setSpeedInHz(feedMotorSpeed);
           feedMotor->setAcceleration(feedMotorAcceleration);
           if (isCutMotorHomed()) {
+            Serial.println("Cut motor homed - starting feed motor forward");
             feedMotor->runForward();
+            Serial.println("Feed motor runForward() called");
           } else {
             Serial.println("=== FEED MOTOR START BLOCKED ===");
             Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
@@ -190,15 +200,22 @@ void updateIdleState() {
           }
           
           resetMotorTimeout();
+        } else {
+          Serial.println("Feed motor pointer invalid or already running");
         }
       } else {
+        Serial.println("Stopping feed motor...");
         if (feedMotor && feedMotor->isRunning()) {
           feedMotor->forceStop();
           feedMotorTimeoutOccurred = false;
+          Serial.println("Feed motor stopped");
         }
       }
       
       feedMotorWasRunning = feedMotorShouldRun;
+      Serial.println("feedMotorWasRunning updated to: " + String(feedMotorWasRunning ? "TRUE" : "FALSE"));
+    } else {
+      Serial.println("Waiting for delay - only " + String(millis() - lastFeedMotorStateChange) + "ms elapsed");
     }
   }
   

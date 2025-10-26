@@ -62,9 +62,10 @@ void updateHomingState() {
       homingMotorMoving = false;
       setCutMotorHomed(true); // Mark cut motor as homed for safety
       Serial.println("Cut motor homed flag set to TRUE");
-      Serial.println("Return state after homing: " + getCurrentStateName());
+      SystemState returnState = getReturnStateAfterHoming();
+      Serial.println("Return state after homing: " + String(returnState));
       Serial.println("Transitioning to return state...");
-      transitionToState(getReturnStateAfterHoming());
+      transitionToState(returnState);
     }
   } else {
     // Add periodic status update if motor should be moving but isn't
