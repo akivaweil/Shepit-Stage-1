@@ -92,6 +92,7 @@ bool isMotorEnableDelayComplete() {
 void disableAllMotorsAfterDelay() {
   if (motorsEnabled) {
     digitalWrite(FEED_MOTOR_ENABLE_PIN, HIGH); // Active low enable - disable feed motor
+    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable - ensure cut motor stays enabled
     // Cut motor is NEVER disabled - always enabled
     motorsEnabled = false;
     Serial.println("Sleep mode: feed motor disabled (cut motor always enabled)");
@@ -102,6 +103,9 @@ void checkMotorTimeout() {
   // Sleep mode: disable motors after 3 seconds in idle state
   // BUT only if feed motor is not running (to prevent relay flickering)
   // Also don't disable motors during reload state
+  // Cut motor is ALWAYS enabled
+  digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);  // Always keep cut motor enabled
+  
   if (currentSystemState == STATE_IDLE) {
     // Check if feed motor is currently running
     bool feedMotorRunning = (feedMotor && feedMotor->isRunning());

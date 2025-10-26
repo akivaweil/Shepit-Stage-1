@@ -34,7 +34,7 @@ const int WOOD_PRESENT_SENSOR_PIN = 3;
 const int WOOD_DISTANCE_SENSOR_PIN = 10;
 
 // Cut motor home switch pin (active HIGH - HIGH when at home position)
-const int CUT_MOTOR_HOME_SWITCH_PIN = 1;
+const int CUT_MOTOR_HOME_SWITCH_PIN = 36;
 
 // Pneumatic clamp relay pin (LOW = extended, HIGH = retracted)
 const int CLAMP_RELAY_PIN = 37; 
