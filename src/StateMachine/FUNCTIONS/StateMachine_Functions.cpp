@@ -60,11 +60,10 @@ void resetMotorTimeout() {
 }
 
 void enableAllMotors() {
-  if (!motorsEnabled) {
-    digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable - enable feed motor
-    digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable - ensure cut motor is enabled
-    motorsEnabled = true;
-  }
+  // Always write enable pins to ensure motors are enabled
+  digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable - enable feed motor
+  digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable - ensure cut motor is enabled
+  motorsEnabled = true;
   resetMotorTimeout();
 }
 
