@@ -10,7 +10,7 @@ extern FastAccelStepper *cutMotor;
 //* ************************************************************************
 
 // Configuration
-static const float HOMING_SPEED = 200.0;
+static const float HOMING_SPEED = 400.0;
 static const float HOMING_ACCELERATION = 10000.0;
 
 // State tracking

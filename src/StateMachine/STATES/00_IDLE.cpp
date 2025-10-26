@@ -183,6 +183,8 @@ void updateIdleState() {
             Serial.println("Cut motor homed - starting feed motor forward");
             feedMotor->runForward();
             Serial.println("Feed motor runForward() called");
+            delay(50); // Small delay to let motor start
+            Serial.println("Feed motor isRunning check: " + String(feedMotor->isRunning() ? "TRUE" : "FALSE"));
           } else {
             Serial.println("=== FEED MOTOR START BLOCKED ===");
             Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
