@@ -28,6 +28,9 @@ static float cutMotorStartPosition = 0.0;
 void enterCuttingState() {
   enableAllMotors();
   
+  // Reset distance sensor to ensure it can trigger again next cycle
+  resetFeedDistanceSensor();
+  
   currentCuttingStep = CUTTING_STEP_CUT_WOOD;
   
   cutMotorStarted = false;
@@ -120,7 +123,8 @@ void updateCheckConditionsStep() {
   bool runCycleStillActive = isRunCycleSwitchActive();
   
   if (woodStillPresent && runCycleStillActive) {
-    transitionToState(STATE_HOMING);
+    // Return to IDLE to restart continuous feeding cycle
+    transitionToState(STATE_IDLE);
   } else if (woodStillPresent && !runCycleStillActive) {
     transitionToState(STATE_IDLE);
   } else {
