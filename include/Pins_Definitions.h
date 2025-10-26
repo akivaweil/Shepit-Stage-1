@@ -21,8 +21,8 @@ extern const int BUTTON_PIN;
 // Run cycle switch pin (active high)
 extern const int RUN_CYCLE_SWITCH_PIN;
 
-// Reload switch pin (active high)
-extern const int RELOAD_SWITCH_PIN;
+// Unload switch pin (active high)
+extern const int UNLOAD_SWITCH_PIN;
 
 // Red button pin (active high)
 extern const int RED_BUTTON_PIN;

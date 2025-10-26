@@ -11,7 +11,7 @@ extern FastAccelStepper *cutMotor;
 #include "../STATES/01_HOMING.cpp"
 #include "../STATES/cut_cycle/02_FEED_TO_DISTANCE.cpp"
 #include "../STATES/cut_cycle/03_CUTTING.cpp"
-#include "../STATES/04_RELOAD.cpp"
+#include "../STATES/04_UNLOAD.cpp"
 
 //* ************************************************************************
 //* *********************** GLOBAL STATE VARIABLES ************************
@@ -102,7 +102,7 @@ void disableAllMotorsAfterDelay() {
 void checkMotorTimeout() {
   // Sleep mode: disable motors after 3 seconds in idle state
   // BUT only if feed motor is not running (to prevent relay flickering)
-  // Also don't disable motors during reload state
+  // Also don't disable motors during unload state
   // Cut motor is ALWAYS enabled
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);  // Always keep cut motor enabled
   
@@ -115,7 +115,7 @@ void checkMotorTimeout() {
       disableAllMotorsAfterDelay();
     }
   }
-  // Note: Motors remain enabled during reload state to prevent interruption
+  // Note: Motors remain enabled during unload state to prevent interruption
 }
 
 // Individual motor control functions maintained for manual commands
@@ -259,7 +259,7 @@ String getCurrentStateName() {
     case STATE_HOMING: return "HOMING";
     case STATE_FEED_TO_DISTANCE: return "FEED_TO_DISTANCE";
     case STATE_CUTTING: return "CUTTING";
-    case STATE_RELOAD: return "RELOAD";
+    case STATE_UNLOAD: return "UNLOAD";
     default: return "UNKNOWN";
   }
 }
@@ -276,7 +276,7 @@ bool isSystemBusy() {
   return (currentSystemState == STATE_HOMING ||
           currentSystemState == STATE_FEED_TO_DISTANCE ||
           currentSystemState == STATE_CUTTING ||
-          currentSystemState == STATE_RELOAD);
+          currentSystemState == STATE_UNLOAD);
 }
 
 //* ************************************************************************
@@ -318,7 +318,7 @@ void transitionToState(SystemState newState) {
     case STATE_CUTTING:
       // Exit handled by enter function
       break;
-    case STATE_RELOAD:
+    case STATE_UNLOAD:
       // Exit handled by enter function
       break;
   }
@@ -341,8 +341,8 @@ void transitionToState(SystemState newState) {
     case STATE_CUTTING:
       enterCuttingState();
       break;
-    case STATE_RELOAD:
-      enterReloadState();
+    case STATE_UNLOAD:
+      enterUnloadState();
       break;
   }
 }
@@ -365,8 +365,8 @@ void updateStateMachine() {
     case STATE_CUTTING:
       updateCuttingState();
       break;
-    case STATE_RELOAD:
-      updateReloadState();
+    case STATE_UNLOAD:
+      updateUnloadState();
       break;
   }
 }
@@ -416,7 +416,7 @@ void initializeStateMachine() {
 // - 01_HOMING.cpp
 // - 02_FEED_TO_DISTANCE.cpp
 // - 03_CUTTING.cpp
-// - 04_RELOAD.cpp
+// - 04_UNLOAD.cpp
 
 //* ************************************************************************
 //* *********************** STATE MACHINE RESET FUNCTIONS *********************

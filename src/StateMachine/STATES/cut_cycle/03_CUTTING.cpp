@@ -128,6 +128,6 @@ void updateCheckConditionsStep() {
   } else if (woodStillPresent && !runCycleStillActive) {
     transitionToState(STATE_IDLE);
   } else {
-    transitionToState(STATE_RELOAD);
+    transitionToState(STATE_UNLOAD);
   }
 }

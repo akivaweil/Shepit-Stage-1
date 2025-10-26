@@ -7,20 +7,20 @@ extern FastAccelStepper *feedMotor;
 extern FastAccelStepper *cutMotor;
 
 // Configuration
-static unsigned long reloadStartTime = 0;
-static bool reloadMotorMoving = false;
+static unsigned long unloadStartTime = 0;
+static bool unloadMotorMoving = false;
 
-void enterReloadState() {
+void enterUnloadState() {
   if (isFeedMotorTimeoutLocked()) {
     resetFeedMotorTimeoutLock();
   }
   
   resetFeedMotorControlVariables(false);
   
-  reloadStartTime = 0;
-  reloadMotorMoving = false;
+  unloadStartTime = 0;
+  unloadMotorMoving = false;
   
-  if (digitalRead(RELOAD_SWITCH_PIN) != HIGH) {
+  if (digitalRead(UNLOAD_SWITCH_PIN) != HIGH) {
     transitionToState(STATE_IDLE);
     return;
   }
@@ -34,22 +34,22 @@ void enterReloadState() {
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
     feedMotor->runBackward();
-    reloadMotorMoving = true;
-    reloadStartTime = millis();
+    unloadMotorMoving = true;
+    unloadStartTime = millis();
   }
 }
 
-void updateReloadState() {
-  // Reset motor timeout to keep motors enabled during reload
+void updateUnloadState() {
+  // Reset motor timeout to keep motors enabled during unload
   resetMotorTimeout();
   
-  // Check if reload switch is turned off
-  bool reloadSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
+  // Check if unload switch is turned off
+  bool unloadSwitchActive = digitalRead(UNLOAD_SWITCH_PIN) == HIGH;
   
-  if (!reloadSwitchActive) {
+  if (!unloadSwitchActive) {
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
-      reloadMotorMoving = false;
+      unloadMotorMoving = false;
     }
     
     extendForwardClamp();
@@ -58,11 +58,12 @@ void updateReloadState() {
   }
   
   // Keep motor running backward while switch is active
-  if (reloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
+  if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
     feedMotor->runBackward();
   }
 }
 
-void exitReloadState() {
-  reloadMotorMoving = false;
+void exitUnloadState() {
+  unloadMotorMoving = false;
 }
+

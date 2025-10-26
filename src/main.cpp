@@ -168,7 +168,7 @@ void processSerialCommand(String command) {
     Serial.println("Feed motor position: " + String(feedMotor ? feedMotor->getCurrentPosition() : 0));
     Serial.println("Cut motor position: " + String(cutMotor ? cutMotor->getCurrentPosition() : 0));
     Serial.println("Forward clamp: " + String(isForwardClampRetracted() ? "RETRACTED" : "EXTENDED"));
-    Serial.println("Reload mode active: " + String(currentSystemState == STATE_RELOAD ? "YES" : "NO"));
+    Serial.println("Unload mode active: " + String(currentSystemState == STATE_UNLOAD ? "YES" : "NO"));
     Serial.println("Last activity: " + String(millis() - lastActivityTime) + "ms ago");
   }
   
@@ -194,34 +194,34 @@ void processSerialCommand(String command) {
     }
   }
   
-  // Reload mode commands
-  else if (command == "reload") {
+  // Unload mode commands
+  else if (command == "unload") {
     if (isSystemIdle()) {
-      // Check if right switch is active before starting reload mode
-      if (digitalRead(RELOAD_SWITCH_PIN) == HIGH) {
-        Serial.println("Starting reload mode - RIGHT SWITCH ACTIVE");
-        transitionToState(STATE_RELOAD);
+      // Check if right switch is active before starting unload mode
+      if (digitalRead(UNLOAD_SWITCH_PIN) == HIGH) {
+        Serial.println("Starting unload mode - RIGHT SWITCH ACTIVE");
+        transitionToState(STATE_UNLOAD);
       } else {
-        Serial.println("Cannot start reload mode - RIGHT SWITCH NOT ACTIVE");
+        Serial.println("Cannot start unload mode - RIGHT SWITCH NOT ACTIVE");
       }
     } else {
-      Serial.println("Cannot start reload mode - system busy, current state: " + getCurrentStateName());
+      Serial.println("Cannot start unload mode - system busy, current state: " + getCurrentStateName());
     }
   }
-  else if (command == "testreload") {
-    Serial.println("=== RELOAD SWITCH TEST ===");
-    Serial.println("Raw pin value: " + String(digitalRead(RELOAD_SWITCH_PIN)));
-      Serial.println("Bounce2 state: " + String(reloadSwitch.read()));
-  Serial.println("isReloadSwitchActive(): " + String(isReloadSwitchActive()));
+  else if (command == "testunload") {
+    Serial.println("=== UNLOAD SWITCH TEST ===");
+    Serial.println("Raw pin value: " + String(digitalRead(UNLOAD_SWITCH_PIN)));
+      Serial.println("Bounce2 state: " + String(unloadSwitch.read()));
+  Serial.println("isUnloadSwitchActive(): " + String(isUnloadSwitchActive()));
     Serial.println("Current system state: " + getCurrentStateName());
     Serial.println("========================");
   }
-  else if (command == "stopreload") {
-    if (currentSystemState == STATE_RELOAD) {
-      Serial.println("Stopping reload mode and returning to IDLE");
+  else if (command == "stopunload") {
+    if (currentSystemState == STATE_UNLOAD) {
+      Serial.println("Stopping unload mode and returning to IDLE");
       transitionToState(STATE_IDLE);
     } else {
-      Serial.println("Not in reload mode - current state: " + getCurrentStateName());
+      Serial.println("Not in unload mode - current state: " + getCurrentStateName());
     }
   }
   
@@ -249,9 +249,9 @@ void processSerialCommand(String command) {
     Serial.println("System:");
     Serial.println("  status - Show system status");
     Serial.println("  sequence - Start cutting sequence manually");
-    Serial.println("  reload - Start reload mode (feed motor moves 5000 steps reverse)");
-    Serial.println("  testreload - Test reload switch status and values");
-    Serial.println("  stopreload - Stop reload mode and return to IDLE");
+    Serial.println("  unload - Start unload mode (feed motor moves 5000 steps reverse)");
+    Serial.println("  testunload - Test unload switch status and values");
+    Serial.println("  stopunload - Stop unload mode and return to IDLE");
     Serial.println("  stop/emergency - Emergency stop");
     Serial.println("  idle - Return to IDLE state");
     Serial.println("  help - Show this help");

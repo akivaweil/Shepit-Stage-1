@@ -18,8 +18,8 @@ static bool woodWasPresentAtStart = false;
 static bool waitingForWoodReset = false;
 static bool woodSensorDeactivated = false;
 
-// Automatic reload constants
-static const int32_t AUTOMATIC_RELOAD_STEPS = 5000;
+// Automatic unload constants
+static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;
 
 void enterFeedToDistanceState() {
   feedStartTime = 0;
@@ -102,7 +102,7 @@ void updateFeedToDistanceState() {
         
         feedMotor->setSpeedInHz(feedMotorSpeed);
         feedMotor->setAcceleration(feedMotorAcceleration);
-        feedMotor->move(-AUTOMATIC_RELOAD_STEPS);
+        feedMotor->move(-AUTOMATIC_UNLOAD_STEPS);
         
         while (feedMotor->isRunning()) {
           delay(10);

@@ -71,7 +71,7 @@ void updateIdleState() {
   }
   
   // Feed motor runs when run cycle switch is ON and wood is present
-  bool newFeedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
+  bool newFeedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_UNLOAD);
   
   // Reset feed motor timeout lock when conditions change
   if (runCycleActive != lastRunCycleActive || woodPresent != lastWoodPresent) {
@@ -174,7 +174,7 @@ void updateIdleState() {
           delay(50); // Small delay to let motor start
           Serial.println("Feed motor isRunning check: " + String(feedMotor->isRunning() ? "TRUE" : "FALSE"));
           
-          if (currentSystemState != STATE_RELOAD) {
+          if (currentSystemState != STATE_UNLOAD) {
             feedMotorStartTime = millis();
             feedMotorTimeoutOccurred = false;
           }
@@ -200,7 +200,7 @@ void updateIdleState() {
   }
   
   // Monitor conditions and stop feed motor immediately if they change
-  if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_RELOAD)) {
+  if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_UNLOAD)) {
     if (!runCycleActive) {
       feedMotor->forceStop();
       feedMotorWasRunning = false;
@@ -221,7 +221,7 @@ void updateIdleState() {
   }
   
   // Feed motor timeout check
-  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && (currentSystemState != STATE_RELOAD)) {
+  if (feedMotor && feedMotor->isRunning() && !feedMotorTimeoutOccurred && (currentSystemState != STATE_UNLOAD)) {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - feedMotorStartTime;
     
@@ -246,11 +246,11 @@ void updateIdleState() {
     return;
   }
   
-  // Reload switch monitoring
-  bool reloadSwitchActive = isReloadSwitchActive();
-  static bool reloadSwitchWasActive = false;
+  // Unload switch monitoring
+  bool unloadSwitchActive = isUnloadSwitchActive();
+  static bool unloadSwitchWasActive = false;
   
-  if (reloadSwitchActive && !reloadSwitchWasActive) {
+  if (unloadSwitchActive && !unloadSwitchWasActive) {
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
     }
@@ -259,11 +259,11 @@ void updateIdleState() {
       extendForwardClamp();
     }
     
-    transitionToState(STATE_RELOAD);
+    transitionToState(STATE_UNLOAD);
     return;
   }
   
-  reloadSwitchWasActive = reloadSwitchActive;
+  unloadSwitchWasActive = unloadSwitchActive;
 }
 
 void exitIdleState() {

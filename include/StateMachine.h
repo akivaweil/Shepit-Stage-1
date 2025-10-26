@@ -15,7 +15,7 @@ enum SystemState {
   STATE_HOMING = 1,
   STATE_FEED_TO_DISTANCE = 2,
   STATE_CUTTING = 3,
-  STATE_RELOAD = 4
+  STATE_UNLOAD = 4
 };
 
 // System events for state machine
@@ -23,7 +23,7 @@ enum SystemEvent {
   EVENT_WOOD_DETECTED,
   EVENT_DISTANCE_SENSOR_TRIGGERED,
   EVENT_CUT_COMPLETE,
-  EVENT_RELOAD_REQUESTED,
+  EVENT_UNLOAD_REQUESTED,
   EVENT_RUN_CYCLE_ACTIVATED,
   EVENT_RUN_CYCLE_DEACTIVATED
 };
@@ -137,7 +137,7 @@ bool isWoodAtCorrectDistance();
 void initializeFeedDistanceSensor();
 void initializeWoodPresenceSensor();
 void initializeRunCycleSwitch();
-void initializeReloadSwitch();
+void initializeUnloadSwitch();
 void initializeRedButton();
 void initializeCutMotorHomeSwitch();
 void initializeAllSensors();
@@ -146,7 +146,7 @@ void initializeAllSensors();
 void updateFeedDistanceSensor();
 void updateWoodPresenceSensor();
 void updateRunCycleSwitch();
-void updateReloadSwitch();
+void updateUnloadSwitch();
 void updateRedButton();
 void updateCutMotorHomeSwitch();
 void updateAllSensors();
@@ -156,7 +156,7 @@ bool isFeedDistanceSensorTriggered();
 bool isWoodPresenceSensorActive();
 bool isRunCycleSwitchActive();
 bool isRunCycleSwitchActiveCentralized();
-bool isReloadSwitchActive();
+bool isUnloadSwitchActive();
 bool isRedButtonPressed();
 bool isCutMotorHomeSwitchTriggered();
 
@@ -164,7 +164,7 @@ bool isCutMotorHomeSwitchTriggered();
 void resetFeedDistanceSensor();
 void resetWoodPresenceSensor();
 void resetRunCycleSwitch();
-void resetReloadSwitch();
+void resetUnloadSwitch();
 void resetRedButton();
 void resetCutMotorHomeSwitch();
 void resetAllSensors();
@@ -173,7 +173,7 @@ void resetAllSensors();
 extern Bounce2::Button feedDistanceSensor;
 extern Bounce2::Button woodPresenceSensor;
 extern Bounce2::Button runCycleSwitch;
-extern Bounce2::Button reloadSwitch;
+extern Bounce2::Button unloadSwitch;
 extern Bounce2::Button redButton;
 // Cut motor home switch now uses direct digital reading - no Bounce2 object needed
 
@@ -184,8 +184,8 @@ void stopContinuousFeed();
 // Emergency stop function for feed operations
 void emergencyStopFeedOperation();
 
-// Reload mode state
-extern bool reloadModeActive;
+// Unload mode state
+extern bool unloadModeActive;
 
 // Individual state functions
 void enterIdleState();
@@ -220,9 +220,9 @@ void updateCheckConditionsStep();
 void resetCutMotorStepFlags();
 void resetReturnMotorStepFlags();
 
-void enterReloadState();
-void updateReloadState();
-void exitReloadState();
+void enterUnloadState();
+void updateUnloadState();
+void exitUnloadState();
 
 // Distance sensor functions
 void initializeFeedDistanceSensor();
