@@ -9,7 +9,6 @@ extern FastAccelStepper *cutMotor;
 // Configuration
 static unsigned long reloadStartTime = 0;
 static bool reloadMotorMoving = false;
-static const int32_t RELOAD_STEPS = 5000;
 
 void enterReloadState() {
   if (isFeedMotorTimeoutLocked()) {
@@ -30,18 +29,20 @@ void enterReloadState() {
   
   retractForwardClamp();
   
+  // Start continuous backward movement
   if (feedMotor) {
-    int32_t initialPosition = feedMotor->getCurrentPosition();
-    
     feedMotor->setSpeedInHz(feedMotorSpeed);
     feedMotor->setAcceleration(feedMotorAcceleration);
-    feedMotor->move(-RELOAD_STEPS);
+    feedMotor->runBackward();
     reloadMotorMoving = true;
     reloadStartTime = millis();
   }
 }
 
 void updateReloadState() {
+  // Reset motor timeout to keep motors enabled during reload
+  resetMotorTimeout();
+  
   // Check if reload switch is turned off
   bool reloadSwitchActive = digitalRead(RELOAD_SWITCH_PIN) == HIGH;
   
@@ -56,11 +57,9 @@ void updateReloadState() {
     return;
   }
   
-  // Check for movement completion
+  // Keep motor running backward while switch is active
   if (reloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
-    reloadMotorMoving = false;
-    extendForwardClamp();
-    transitionToState(STATE_IDLE);
+    feedMotor->runBackward();
   }
 }
 
