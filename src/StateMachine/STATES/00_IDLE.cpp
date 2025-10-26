@@ -56,20 +56,30 @@ void updateIdleState() {
   bool distanceSensorTriggered = isWoodAtCorrectDistance();
   bool inCuttingCycle = isInCuttingCycle();
   
+  // Log state changes
+  static bool lastRunCycleActive = false;
+  static bool lastWoodPresent = false;
+  if (runCycleActive != lastRunCycleActive || woodPresent != lastWoodPresent) {
+    Serial.println("=== IDLE STATE CONDITIONS ===");
+    Serial.println("Run cycle switch: " + String(runCycleActive ? "ACTIVE" : "INACTIVE"));
+    Serial.println("Wood present: " + String(woodPresent ? "YES" : "NO"));
+    Serial.println("Distance sensor: " + String(distanceSensorTriggered ? "TRIGGERED" : "NOT TRIGGERED"));
+    Serial.println("In cutting cycle: " + String(inCuttingCycle ? "YES" : "NO"));
+    Serial.println("Feed motor timeout locked: " + String(isFeedMotorTimeoutLocked() ? "YES" : "NO"));
+    Serial.println("Cut motor homed: " + String(isCutMotorHomed() ? "YES" : "NO"));
+    lastRunCycleActive = runCycleActive;
+    lastWoodPresent = woodPresent;
+  }
+  
   // Feed motor runs when run cycle switch is ON and wood is present
   bool newFeedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_RELOAD);
   
   // Reset feed motor timeout lock when conditions change
-  static bool previousRunCycleActive = false;
-  static bool previousWoodPresent = false;
-  
-  if (runCycleActive != previousRunCycleActive || woodPresent != previousWoodPresent) {
+  if (runCycleActive != lastRunCycleActive || woodPresent != lastWoodPresent) {
     if (isFeedMotorTimeoutLocked()) {
       resetFeedMotorTimeoutLock();
       feedMotorTimeoutOccurred = false;
     }
-    previousRunCycleActive = runCycleActive;
-    previousWoodPresent = woodPresent;
   }
   
   // Allow user to reset timeout lock by cycling run cycle switch
