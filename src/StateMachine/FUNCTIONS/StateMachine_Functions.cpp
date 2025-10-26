@@ -216,6 +216,14 @@ bool isRunCycleSwitchActive() {
 
 void startContinuousFeed() {
   if (feedMotor) {
+    // Check if cut motor is homed before allowing feed motor movement
+    if (!isCutMotorHomed()) {
+      Serial.println("ERROR: Cut motor not homed - auto-homing before continuous feed operation");
+      setReturnStateAfterHoming(STATE_IDLE);
+      transitionToState(STATE_HOMING);
+      return;
+    }
+    
     // Explicitly enable motors if they're disabled (wake from sleep mode)
     if (!motorsEnabled) {
       enableAllMotors();
