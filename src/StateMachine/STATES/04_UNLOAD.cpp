@@ -60,11 +60,11 @@ void updateUnloadState() {
   resetMotorTimeout();
   
   if (autoUnloadMode) {
-    // Automatic unload mode: run for 10 seconds then transition to IDLE
+    // Automatic unload mode: run for configured duration then transition to IDLE
     unsigned long elapsedTime = millis() - unloadStartTime;
     
-    if (elapsedTime >= 10000) {
-      // 10 seconds elapsed, stop motor and transition to IDLE
+    if (elapsedTime >= unloadDurationMs) {
+      // Configured duration elapsed, stop motor and transition to IDLE
       if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
         unloadMotorMoving = false;
@@ -75,7 +75,7 @@ void updateUnloadState() {
       return;
     }
     
-    // Keep motor running backward during the 10 second period
+    // Keep motor running backward during the configured duration
     if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
       feedMotor->runBackward();
     }

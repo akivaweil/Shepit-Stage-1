@@ -16,6 +16,9 @@ extern const unsigned long woodDistanceDelay;
 // Feed motor timeout
 extern const unsigned long feedMotorTimeout;
 
+// Unload duration
+extern const unsigned long unloadDurationMs;
+
 // Motor sleep timeout
 extern const unsigned long motorTimeoutMs;
 

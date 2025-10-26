@@ -16,6 +16,9 @@ const unsigned long woodDistanceDelay = 10;     // Milliseconds to wait after di
 // Feed motor timeout
 const unsigned long feedMotorTimeout = 5000;    // 5-second safety limit for feed motor operation
 
+// Unload duration
+const unsigned long unloadDurationMs = 6000;   // 6 seconds for automatic unload
+
 // Motor sleep timeout
 const unsigned long motorTimeoutMs = 2000;      // 2 seconds for sleep mode
 
