@@ -67,15 +67,6 @@ void exitCuttingState() {
 
 // Step 1: Cut Wood
 void updateCutWoodStep() {
-  // Check if wood became absent during cutting
-  if (!isWoodPresent()) {
-    if (cutMotor) {
-      cutMotor->forceStop();
-    }
-    transitionToState(STATE_UNLOAD);
-    return;
-  }
-  
   if (!cutMotorStarted && cutMotor) {
     cutMotor->setSpeedInHz(cutMotorSpeed);
     cutMotor->setAcceleration(cutMotorAcceleration);
@@ -101,15 +92,6 @@ void updateCutWoodStep() {
 
 // Step 2: Return Cut Motor
 void updateReturnCutMotorStep() {
-  // Check if wood became absent during cutting
-  if (!isWoodPresent()) {
-    if (cutMotor) {
-      cutMotor->forceStop();
-    }
-    transitionToState(STATE_UNLOAD);
-    return;
-  }
-  
   if (!returnMotorStarted && cutMotor) {
     cutMotor->setSpeedInHz(cutMotorReturnSpeed);
     cutMotor->setAcceleration(cutMotorReturnAcceleration);
@@ -140,12 +122,15 @@ void updateCheckConditionsStep() {
   bool woodStillPresent = isWoodPresent();
   bool runCycleStillActive = isRunCycleSwitchActive();
   
-  if (woodStillPresent && runCycleStillActive) {
+  // Check if wood sensor reads HIGH (wood NOT present)
+  if (!woodStillPresent) {
+    // Wood is no longer present - run unload state for 10 seconds
+    transitionToState(STATE_UNLOAD);
+  } else if (woodStillPresent && runCycleStillActive) {
     // Return to IDLE to restart continuous feeding cycle
     transitionToState(STATE_IDLE);
-  } else if (woodStillPresent && !runCycleStillActive) {
-    transitionToState(STATE_IDLE);
   } else {
-    transitionToState(STATE_UNLOAD);
+    // Wood present but run cycle not active
+    transitionToState(STATE_IDLE);
   }
 }
