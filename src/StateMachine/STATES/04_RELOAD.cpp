@@ -16,7 +16,7 @@ void enterReloadState() {
     resetFeedMotorTimeoutLock();
   }
   
-  resetFeedMotorControlVariables();
+  resetFeedMotorControlVariables(false);
   
   reloadStartTime = 0;
   reloadMotorMoving = false;

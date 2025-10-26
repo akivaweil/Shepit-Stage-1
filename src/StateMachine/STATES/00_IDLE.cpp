@@ -270,7 +270,7 @@ void exitIdleState() {
   // Motor enable/disable is handled by the target state
 }
 
-void resetIdleFeedMotorControl() {
+void resetIdleFeedMotorControl(bool stopMotor) {
   feedMotorShouldRun = false;
   feedMotorWasRunning = false;
   lastFeedMotorStateChange = 0;
@@ -281,7 +281,7 @@ void resetIdleFeedMotorControl() {
   clampWasRetracted = false;
   lastClampStateChange = 0;
   
-  if (feedMotor && feedMotor->isRunning()) {
+  if (stopMotor && feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
   }
 }

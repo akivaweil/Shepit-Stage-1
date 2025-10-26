@@ -499,11 +499,11 @@ void resetMotorMovementFlags() {
 }
 
 // Function to reset feed motor control variables (IDLE state specific)
-void resetFeedMotorControlVariables() {
+void resetFeedMotorControlVariables(bool stopMotor) {
   Serial.println("=== RESETTING FEED MOTOR CONTROL VARIABLES ===");
   
   // Call the IDLE state function to reset its static variables
-  resetIdleFeedMotorControl();
+  resetIdleFeedMotorControl(stopMotor);
   
   Serial.println("Feed motor control variables reset complete");
 }

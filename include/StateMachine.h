@@ -116,7 +116,7 @@ void resetFeedMotorFlags();
 void resetMotorMovementFlags();
 
 // Function to reset feed motor control variables (IDLE state specific)
-void resetFeedMotorControlVariables();
+void resetFeedMotorControlVariables(bool stopMotor = true);
 
 // Forward clamp control functions
 void extendForwardClamp();
@@ -193,7 +193,7 @@ void updateIdleState();
 void exitIdleState();
 
 // Function to reset feed motor control variables in IDLE state
-void resetIdleFeedMotorControl();
+void resetIdleFeedMotorControl(bool stopMotor = true);
 
 void enterHomingState();
 void updateHomingState();
