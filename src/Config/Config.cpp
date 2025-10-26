@@ -31,6 +31,10 @@ const float cutMotorSteps = 3500.0;            // Steps per move
 const float cutMotorReturnSpeed = 30000.0;      // Steps per second 
 const float cutMotorReturnAcceleration = 35000.0; // Steps per second^2
 
+// Cut motor offset after homing
+const float cutMotorOffsetAfterHomingInches = 0.5;  // Move 0.5 inches away from home after homing
+const float cutMotorStepsPerInch = 2000.0;         // Steps per inch (1 inch = 2000 steps)
+
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************
 //* ************************************************************************

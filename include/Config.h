@@ -31,6 +31,10 @@ extern const float cutMotorSteps;
 extern const float cutMotorReturnSpeed;
 extern const float cutMotorReturnAcceleration;
 
+// Cut motor offset after homing
+extern const float cutMotorOffsetAfterHomingInches; // Inches to move away from home after homing
+extern const float cutMotorStepsPerInch;            // Steps per inch conversion
+
 //* ************************************************************************
 //* *********************** BUTTON CONFIGURATION ***************************
 //* ************************************************************************

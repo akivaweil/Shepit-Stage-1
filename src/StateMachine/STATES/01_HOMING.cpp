@@ -15,9 +15,11 @@ static const float HOMING_ACCELERATION = 10000.0;
 
 // State tracking
 static bool homingMotorMoving = false;
+static bool offsettingAfterHoming = false;
 
 void enterHomingState() {
   homingMotorMoving = false;
+  offsettingAfterHoming = false;
   
   Serial.println("=== ENTERING HOMING STATE ===");
   Serial.println("Motors enabled status: " + String(motorsEnabled ? "ENABLED" : "DISABLED"));
@@ -45,7 +47,19 @@ void enterHomingState() {
 
 void updateHomingState() {
   //! ************************************************************************
-  //! CHECK FOR CUT MOTOR HOME SWITCH TRIGGER
+  //! STEP 1: MOVE CUT MOTOR AWAY FROM HOME IF HOMING COMPLETE
+  //! ************************************************************************
+  if (offsettingAfterHoming) {
+    if (cutMotor && !cutMotor->isRunning()) {
+      Serial.println("Cut motor offset complete - transitioning to FEED_TO_DISTANCE");
+      offsettingAfterHoming = false;
+      transitionToState(STATE_FEED_TO_DISTANCE);
+    }
+    return;
+  }
+  
+  //! ************************************************************************
+  //! STEP 2: CHECK FOR CUT MOTOR HOME SWITCH TRIGGER
   //! ************************************************************************
   if (homingMotorMoving) {
     // Check cut motor home switch more aggressively
@@ -59,8 +73,16 @@ void updateHomingState() {
         Serial.println("Cut motor stopped and position set to 0");
       }
       homingMotorMoving = false;
-      Serial.println("Cut motor homed - transitioning to FEED_TO_DISTANCE");
-      transitionToState(STATE_FEED_TO_DISTANCE);
+      
+      // Move cut motor away from home by configured offset
+      float offsetSteps = cutMotorOffsetAfterHomingInches * cutMotorStepsPerInch;
+      Serial.println("Moving cut motor " + String(cutMotorOffsetAfterHomingInches) + " inches (" + String(offsetSteps) + " steps) away from home");
+      if (cutMotor) {
+        cutMotor->setSpeedInHz(cutMotorSpeed);
+        cutMotor->setAcceleration(cutMotorAcceleration);
+        cutMotor->move(offsetSteps);
+        offsettingAfterHoming = true;
+      }
     }
   } else {
     // Add periodic status update if motor should be moving but isn't
@@ -76,5 +98,6 @@ void updateHomingState() {
 
 void exitHomingState() {
   homingMotorMoving = false;
+  offsettingAfterHoming = false;
 }
 
