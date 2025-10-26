@@ -76,7 +76,7 @@ void initializeRedButton() {
 
 void initializeCutMotorHomeSwitch() {
   // Initialize cut motor home switch with direct digital reading (no debouncing)
-  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT); // Set pin mode without internal pull (active HIGH)
+  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT_PULLDOWN); // Set pin mode with internal pulldown (active HIGH)
   
   // Minimal log
   Serial.println("Init: Cut motor home switch (direct reading)");
@@ -219,7 +219,7 @@ void resetRedButton() {
 
 void resetCutMotorHomeSwitch() {
   // Cut motor home switch uses direct digital reading - just reinitialize pin mode
-  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT);
+  pinMode(CUT_MOTOR_HOME_SWITCH_PIN, INPUT_PULLDOWN);
 }
 
 void resetAllSensors() {
