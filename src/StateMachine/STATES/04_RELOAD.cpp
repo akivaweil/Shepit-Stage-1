@@ -39,7 +39,12 @@ void enterReloadState() {
     reloadMotorMoving = true;
     reloadStartTime = millis();
   } else if (!isCutMotorHomed()) {
+    Serial.println("=== RELOAD STATE BLOCKED ===");
     Serial.println("ERROR: Cut motor not homed - auto-homing before reload operation");
+    Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
+    Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+    Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
+    Serial.println("Setting return state to RELOAD and transitioning to HOMING...");
     setReturnStateAfterHoming(STATE_RELOAD);
     transitionToState(STATE_HOMING);
     return;

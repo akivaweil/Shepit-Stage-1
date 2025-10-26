@@ -218,7 +218,12 @@ void startContinuousFeed() {
   if (feedMotor) {
     // Check if cut motor is homed before allowing feed motor movement
     if (!isCutMotorHomed()) {
+      Serial.println("=== CONTINUOUS FEED BLOCKED ===");
       Serial.println("ERROR: Cut motor not homed - auto-homing before continuous feed operation");
+      Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
+      Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+      Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
+      Serial.println("Setting return state to IDLE and transitioning to HOMING...");
       setReturnStateAfterHoming(STATE_IDLE);
       transitionToState(STATE_HOMING);
       return;

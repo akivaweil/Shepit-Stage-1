@@ -164,7 +164,12 @@ void updateIdleState() {
           if (isCutMotorHomed()) {
             feedMotor->runForward();
           } else {
+            Serial.println("=== FEED MOTOR START BLOCKED ===");
             Serial.println("ERROR: Cut motor not homed - auto-homing before feed operation");
+            Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
+            Serial.println("Cut motor home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+            Serial.println("Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
+            Serial.println("Setting return state to IDLE and transitioning to HOMING...");
             setReturnStateAfterHoming(STATE_IDLE);
             transitionToState(STATE_HOMING);
           }

@@ -18,19 +18,27 @@ static bool homingMotorMoving = false;
 
 void enterHomingState() {
   homingMotorMoving = false;
-  enableAllMotors();
   
-  Serial.println("Starting cut motor homing sequence");
+  Serial.println("=== ENTERING HOMING STATE ===");
+  Serial.println("Motors enabled status: " + String(motorsEnabled ? "ENABLED" : "DISABLED"));
+  Serial.println("Enabling all motors for homing...");
+  enableAllMotors();
+  Serial.println("Motors enabled status after enableAllMotors(): " + String(motorsEnabled ? "ENABLED" : "DISABLED"));
+  
   Serial.println("Cut motor home switch status: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+  Serial.println("Cut motor homed flag: " + String(isCutMotorHomed() ? "TRUE" : "FALSE"));
   
   // Always start cut motor moving backward toward cut motor home switch
   // This ensures the cut motor home switch is pressed before proceeding
   if (cutMotor) {
+    Serial.println("Cut motor pointer valid - setting speed and acceleration");
     cutMotor->setSpeedInHz(HOMING_SPEED);
     cutMotor->setAcceleration(HOMING_ACCELERATION);
+    Serial.println("Starting cut motor movement backward...");
     cutMotor->move(-1000000);
     homingMotorMoving = true;
     Serial.println("Cut motor started moving backward at " + String(HOMING_SPEED) + " Hz");
+    Serial.println("Cut motor running status: " + String(cutMotor->isRunning() ? "RUNNING" : "NOT RUNNING"));
   } else {
     Serial.println("ERROR: Cut motor not available for homing");
   }
@@ -49,11 +57,23 @@ void updateHomingState() {
         // Wait a moment to ensure motor stops
         delay(10);
         cutMotor->setCurrentPosition(0);
+        Serial.println("Cut motor stopped and position set to 0");
       }
       homingMotorMoving = false;
       setCutMotorHomed(true); // Mark cut motor as homed for safety
-      Serial.println("Cut motor homed - transitioning to return state");
+      Serial.println("Cut motor homed flag set to TRUE");
+      Serial.println("Return state after homing: " + getCurrentStateName());
+      Serial.println("Transitioning to return state...");
       transitionToState(getReturnStateAfterHoming());
+    }
+  } else {
+    // Add periodic status update if motor should be moving but isn't
+    static unsigned long lastStatusLog = 0;
+    if (millis() - lastStatusLog > 3000) {
+      lastStatusLog = millis();
+      Serial.println("HOMING WAITING: Motor not moving - check switch status");
+      Serial.println("  Home switch: " + String(isCutMotorHomeSwitchTriggered() ? "TRIGGERED" : "NOT TRIGGERED"));
+      Serial.println("  Motors enabled: " + String(motorsEnabled ? "YES" : "NO"));
     }
   }
 }
