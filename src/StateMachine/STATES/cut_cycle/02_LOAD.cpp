@@ -82,39 +82,36 @@ void enterLoadState() {
 }
 
 void updateLoadState() {
-  if (!isRunCycleSwitchActive()) {
-    emergencyStopFeedOperation();
-    return;
-  }
-  
-  // Monitor wood presence during feeding
-  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered) {
-    if (!isWoodPresent()) {
+  // CRITICAL: Check wood sensor deactivation FIRST before ANY other logic
+  // Check ONLY motor state and wood sensor - ignore all flags
+  if (feedMotor && feedMotor->isRunning() && !distanceSensorTriggered && woodWasPresentAtStart) {
+    if (!isWoodPresent() && !waitingForWoodReset) {
       Serial.println("Wood sensor deactivated - feeding for extra " + String(woodSensorDeactivationDelay) + "ms");
       
-      // BLOCKING DELAY to ensure motor runs for the full duration
-      // This is "drastic" but ensures no other logic stops the motor
+      // BLOCKING DELAY - ABSOLUTELY GUARANTEE motor runs for full duration
       unsigned long startRunoff = millis();
       while (millis() - startRunoff < woodSensorDeactivationDelay) {
-          // Ensure motor keeps running
-          if (feedMotor && !feedMotor->isRunning()) {
+          // FORCE motor to keep running - check every loop iteration
+          if (!feedMotor->isRunning()) {
              feedMotor->setSpeedInHz(feedMotorSpeed);
              feedMotor->setAcceleration(feedMotorAcceleration);
              feedMotor->runForward();
           }
           
-          // CRITICAL SAFETY CHECK: Allow emergency stop via Run Cycle Switch
+          // Safety check for emergency stop
           updateRunCycleSwitch(); 
           if (!isRunCycleSwitchActive()) {
+               feedMotor->forceStop();
+               feedMotorRunning = false;
                emergencyStopFeedOperation();
                return;
           }
           
-          delay(10); // Short delay to prevent watchdog issues
+          delay(10);
       }
       
-      // Stop motor and unload
-      if (feedMotor) {
+      // NOW stop motor and unload
+      if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
         feedMotorRunning = false;
       }
@@ -140,6 +137,12 @@ void updateLoadState() {
       
       return;
     }
+  }
+  
+  // NOW check run cycle switch AFTER wood sensor check
+  if (!isRunCycleSwitchActive()) {
+    emergencyStopFeedOperation();
+    return;
   }
   
   // Monitor for wood sensor reset
