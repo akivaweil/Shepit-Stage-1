@@ -128,6 +128,15 @@ void updateLoadState() {
         }
         
         return;
+      } else {
+        // Delay hasn't elapsed yet - keep motor running and return early
+        // Ensure motor is still running
+        if (feedMotor && !feedMotor->isRunning()) {
+          feedMotor->setSpeedInHz(feedMotorSpeed);
+          feedMotor->setAcceleration(feedMotorAcceleration);
+          feedMotor->runForward();
+        }
+        return;
       }
     } else {
       // Wood sensor is active again, reset the timer
