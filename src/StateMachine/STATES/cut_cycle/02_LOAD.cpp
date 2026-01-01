@@ -2,11 +2,18 @@
 #include "Config.h"
 #include "Pins_Definitions.h"
 
-//* ************************************************************************
-//* ************************ LOAD STATE ************************
-//* ************************************************************************
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ ⚔️ LOAD STATE                                                        ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 
-// State-specific variables
+//* ************************************************************************
+//* ************************ CONFIGURATION ************************
+//* ************************************************************************
+static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;  // Steps to retract after wood sensor deactivation
+
+//* ************************************************************************
+//* ************************ STATE VARIABLES ************************
+//* ************************************************************************
 static unsigned long feedStartTime = 0;
 static unsigned long sensorTriggerTime = 0;
 static bool distanceSensorTriggered = false;
@@ -18,10 +25,17 @@ static bool woodWasPresentAtStart = false;
 static bool waitingForWoodReset = false;
 static bool woodSensorDeactivated = false;
 
-// Automatic unload constants
-static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;
+//* ************************************************************************
+//* ************************ FORWARD DECLARATIONS ************************
+//* ************************************************************************
+void handleWoodSensorDeactivation();
+void handleWoodResetWaiting();
 
+//* ************************************************************************
+//* ************************ ENTER STATE ************************
+//* ************************************************************************
 void enterLoadState() {
+  // Reset all state variables
   feedStartTime = 0;
   sensorTriggerTime = 0;
   distanceSensorTriggered = false;
@@ -36,6 +50,9 @@ void enterLoadState() {
   resetFeedMotorTimeoutLock();
   resetFeedMotorFlags();
   
+  //! ************************************************************************
+  //! STEP 1: VALIDATE PRE-CONDITIONS
+  //! ************************************************************************
   if (!isRunCycleSwitchActive()) {
     loadExitCondition = true;
     return;
@@ -48,6 +65,9 @@ void enterLoadState() {
   
   woodWasPresentAtStart = true;
   
+  //! ************************************************************************
+  //! STEP 2: PREPARE MOTORS AND CLAMP
+  //! ************************************************************************
   if (!motorsEnabled) {
     enableAllMotors();
   }
@@ -56,6 +76,9 @@ void enterLoadState() {
     retractForwardClamp();
   }
   
+  //! ************************************************************************
+  //! STEP 3: VALIDATE MOTOR CONFIGURATION
+  //! ************************************************************************
   if (feedMotorSpeed <= 0 || feedMotorAcceleration <= 0) {
     loadExitCondition = true;
     return;
@@ -67,6 +90,9 @@ void enterLoadState() {
     return;
   }
   
+  //! ************************************************************************
+  //! STEP 4: START FEED MOTOR
+  //! ************************************************************************
   feedMotor->setSpeedInHz(feedMotorSpeed);
   feedMotor->setAcceleration(feedMotorAcceleration);
   feedMotor->runForward();
@@ -81,96 +107,40 @@ void enterLoadState() {
   }
 }
 
+//* ************************************************************************
+//* ************************ UPDATE STATE ************************
+//* ************************************************************************
 void updateLoadState() {
-  // CRITICAL: Check wood sensor deactivation FIRST before ANY other logic
-  // Check ONLY motor state and wood sensor - ignore all flags
+  //! ************************************************************************
+  //! SECTION 1: WOOD SENSOR DEACTIVATION HANDLING
+  //! ************************************************************************
+  // Priority: Handle wood sensor deactivation before other checks
   if (feedMotor && feedMotor->isRunning() && !distanceSensorTriggered && woodWasPresentAtStart) {
     if (!isWoodPresent() && !waitingForWoodReset) {
-      Serial.println("Wood sensor deactivated - feeding for extra " + String(woodSensorDeactivationDelay) + "ms");
-      
-      // BLOCKING DELAY - CONTINUOUSLY restart motor to guarantee it runs
-      unsigned long startRunoff = millis();
-      while (millis() - startRunoff < woodSensorDeactivationDelay) {
-          // CONTINUOUSLY restart motor - don't just check, ALWAYS call runForward()
-          feedMotor->setSpeedInHz(feedMotorSpeed);
-          feedMotor->setAcceleration(feedMotorAcceleration);
-          feedMotor->runForward(); // Keep calling this to ensure it keeps running
-          
-          // Safety check for emergency stop
-          updateRunCycleSwitch(); 
-          if (!isRunCycleSwitchActive()) {
-               feedMotor->forceStop();
-               feedMotorRunning = false;
-               emergencyStopFeedOperation();
-               return;
-          }
-          
-          delay(10);
-      }
-      
-      // NOW stop motor and unload
-      if (feedMotor && feedMotor->isRunning()) {
-        feedMotor->forceStop();
-        feedMotorRunning = false;
-      }
-      
-      extendForwardClamp();
-      
-      if (feedMotor) {
-        retractForwardClamp();
-        
-        feedMotor->setSpeedInHz(feedMotorSpeed);
-        feedMotor->setAcceleration(feedMotorAcceleration);
-        feedMotor->move(-AUTOMATIC_UNLOAD_STEPS);
-        
-        while (feedMotor->isRunning()) {
-          delay(10);
-        }
-        
-        extendForwardClamp();
-        
-        waitingForWoodReset = true;
-        woodSensorDeactivated = false;
-      }
-      
+      handleWoodSensorDeactivation();
       return;
     }
   }
   
-  // NOW check run cycle switch AFTER wood sensor check
+  //! ************************************************************************
+  //! SECTION 2: EMERGENCY STOP CHECK
+  //! ************************************************************************
   if (!isRunCycleSwitchActive()) {
     emergencyStopFeedOperation();
     return;
   }
   
-  // Monitor for wood sensor reset
+  //! ************************************************************************
+  //! SECTION 3: WAITING FOR WOOD RESET
+  //! ************************************************************************
   if (waitingForWoodReset) {
-    if (!woodSensorDeactivated) {
-      if (!isWoodPresent()) {
-        woodSensorDeactivated = true;
-      }
-    } else {
-      if (isWoodPresent()) {
-        waitingForWoodReset = false;
-        woodSensorDeactivated = false;
-        woodWasPresentAtStart = true;
-        
-        if (feedMotor) {
-          feedMotor->setSpeedInHz(feedMotorSpeed);
-          feedMotor->setAcceleration(feedMotorAcceleration);
-          feedMotor->runForward();
-          feedStartTime = millis();
-          feedMotorRunning = true;
-        } else {
-          Serial.println("ERROR: Feed motor not available for restart");
-        }
-      }
-    }
-    
+    handleWoodResetWaiting();
     return;
   }
   
-  // Timeout protection
+  //! ************************************************************************
+  //! SECTION 4: TIMEOUT PROTECTION
+  //! ************************************************************************
   if (feedMotorRunning && !timeoutOccurred) {
     if (millis() - feedStartTime >= feedMotorTimeout) {
       timeoutOccurred = true;
@@ -179,7 +149,9 @@ void updateLoadState() {
     }
   }
   
-  // Distance sensor detection
+  //! ************************************************************************
+  //! SECTION 5: DISTANCE SENSOR DETECTION
+  //! ************************************************************************
   if (!distanceSensorTriggered && isFeedDistanceSensorTriggered()) {
     distanceSensorTriggered = true;
     sensorTriggerTime = millis();
@@ -193,7 +165,9 @@ void updateLoadState() {
     delayTimerStarted = true;
   }
   
-  // Delay completion processing
+  //! ************************************************************************
+  //! SECTION 6: DELAY COMPLETION - TRANSITION TO CUTTING
+  //! ************************************************************************
   if (delayTimerStarted && !loadExitCondition && !timeoutOccurred) {
     if (millis() - sensorTriggerTime >= woodDistanceDelay) {
       if (isRunCycleSwitchActive() && isWoodPresent()) {
@@ -207,7 +181,9 @@ void updateLoadState() {
     }
   }
   
-  // Motor stop verification
+  //! ************************************************************************
+  //! SECTION 7: MOTOR STATE VERIFICATION
+  //! ************************************************************************
   if (!feedMotorRunning && feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
     
@@ -219,6 +195,95 @@ void updateLoadState() {
   }
 }
 
+//* ************************************************************************
+//* ************************ HELPER FUNCTIONS ************************
+//* ************************************************************************
+
+//! ************************************************************************
+//! FUNCTION: Handle wood sensor deactivation with automatic unload
+//! ************************************************************************
+void handleWoodSensorDeactivation() {
+  Serial.println("Wood sensor deactivated - feeding for extra " + String(woodSensorDeactivationDelay) + "ms");
+  
+  // Continue feeding for delay period while monitoring emergency stop
+  unsigned long startRunoff = millis();
+  while (millis() - startRunoff < woodSensorDeactivationDelay) {
+    // Continuously restart motor to ensure it keeps running
+    feedMotor->setSpeedInHz(feedMotorSpeed);
+    feedMotor->setAcceleration(feedMotorAcceleration);
+    feedMotor->runForward();
+    
+    // Safety check for emergency stop
+    updateRunCycleSwitch();
+    if (!isRunCycleSwitchActive()) {
+      feedMotor->forceStop();
+      feedMotorRunning = false;
+      emergencyStopFeedOperation();
+      return;
+    }
+    
+    delay(10);
+  }
+  
+  // Stop motor
+  if (feedMotor && feedMotor->isRunning()) {
+    feedMotor->forceStop();
+    feedMotorRunning = false;
+  }
+  
+  extendForwardClamp();
+  
+  // Perform automatic unload
+  if (feedMotor) {
+    retractForwardClamp();
+    
+    feedMotor->setSpeedInHz(feedMotorSpeed);
+    feedMotor->setAcceleration(feedMotorAcceleration);
+    feedMotor->move(-AUTOMATIC_UNLOAD_STEPS);
+    
+    while (feedMotor->isRunning()) {
+      delay(10);
+    }
+    
+    extendForwardClamp();
+    
+    waitingForWoodReset = true;
+    woodSensorDeactivated = false;
+  }
+}
+
+//! ************************************************************************
+//! FUNCTION: Monitor wood sensor reset and restart feeding
+//! ************************************************************************
+void handleWoodResetWaiting() {
+  if (!woodSensorDeactivated) {
+    // Wait for sensor to fully deactivate
+    if (!isWoodPresent()) {
+      woodSensorDeactivated = true;
+    }
+  } else {
+    // Wait for new wood to be detected
+    if (isWoodPresent()) {
+      waitingForWoodReset = false;
+      woodSensorDeactivated = false;
+      woodWasPresentAtStart = true;
+      
+      if (feedMotor) {
+        feedMotor->setSpeedInHz(feedMotorSpeed);
+        feedMotor->setAcceleration(feedMotorAcceleration);
+        feedMotor->runForward();
+        feedStartTime = millis();
+        feedMotorRunning = true;
+      } else {
+        Serial.println("ERROR: Feed motor not available for restart");
+      }
+    }
+  }
+}
+
+//* ************************************************************************
+//* ************************ EMERGENCY STOP ************************
+//* ************************************************************************
 void emergencyStopFeedOperation() {
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
@@ -230,7 +295,11 @@ void emergencyStopFeedOperation() {
   transitionToState(STATE_IDLE);
 }
 
+//* ************************************************************************
+//* ************************ EXIT STATE ************************
+//* ************************************************************************
 void exitLoadState() {
+  // Reset all state variables
   feedStartTime = 0;
   sensorTriggerTime = 0;
   distanceSensorTriggered = false;
