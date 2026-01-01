@@ -59,6 +59,7 @@ void enterLoadState() {
   }
   
   woodWasPresentAtStart = true;
+  Serial.println("LOAD: Wood detected at start");
   
   //! ************************************************************************
   //! STEP 2: PREPARE MOTORS AND CLAMP
@@ -94,6 +95,7 @@ void enterLoadState() {
   
   feedStartTime = millis();
   feedMotorRunning = true;
+  Serial.println("LOAD: Feed motor started");
   
   if (!feedMotor->isRunning()) {
     Serial.println("ERROR: Feed motor failed to start");
@@ -139,6 +141,7 @@ void updateLoadState() {
   if (feedMotorRunning && !timeoutOccurred) {
     if (millis() - feedStartTime >= feedMotorTimeout) {
       timeoutOccurred = true;
+      Serial.println("LOAD: Timeout occurred");
       emergencyStopFeedOperation();
       return;
     }
@@ -150,6 +153,7 @@ void updateLoadState() {
   if (!distanceSensorTriggered && isFeedDistanceSensorTriggered()) {
     distanceSensorTriggered = true;
     sensorTriggerTime = millis();
+    Serial.println("LOAD: Distance sensor triggered");
     
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
@@ -166,6 +170,7 @@ void updateLoadState() {
   if (delayTimerStarted && !loadExitCondition && !timeoutOccurred) {
     if (millis() - sensorTriggerTime >= woodDistanceDelay) {
       if (isRunCycleSwitchActive() && isWoodPresent()) {
+        Serial.println("LOAD: Delay complete, transitioning to CUTTING");
         transitionToState(STATE_CUTTING);
         return;
       } else {
@@ -227,6 +232,7 @@ void handleWoodSensorDeactivation() {
   }
   
   extendForwardClamp();
+  Serial.println("LOAD: Starting automatic unload");
   
   // Perform automatic unload
   if (feedMotor) {
@@ -244,6 +250,7 @@ void handleWoodSensorDeactivation() {
     
     waitingForWoodReset = true;
     woodSensorDeactivated = false;
+    Serial.println("LOAD: Automatic unload complete, waiting for wood reset");
   }
 }
 
@@ -259,6 +266,7 @@ void handleWoodResetWaiting() {
   } else {
     // Wait for new wood to be detected
     if (isWoodPresent()) {
+      Serial.println("LOAD: New wood detected, restarting feed");
       waitingForWoodReset = false;
       woodSensorDeactivated = false;
       woodWasPresentAtStart = true;
@@ -280,6 +288,7 @@ void handleWoodResetWaiting() {
 //* ************************ EMERGENCY STOP ************************
 //* ************************************************************************
 void emergencyStopFeedOperation() {
+  Serial.println("LOAD: Emergency stop triggered");
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
     feedMotorRunning = false;
@@ -294,6 +303,7 @@ void emergencyStopFeedOperation() {
 //* ************************ EXIT STATE ************************
 //* ************************************************************************
 void exitLoadState() {
+  Serial.println("LOAD: Exiting load state");
   // Reset all state variables
   feedStartTime = 0;
   sensorTriggerTime = 0;
