@@ -1,10 +1,12 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
+#include "StateMachine.h"
 
 //* ************************************************************************
 //* *********************** OTA UPLOAD IMPLEMENTATION *********************
 //* ************************************************************************
 // Barebones WiFi connection and Over-The-Air updates for the ESP32.
+// OTA uploads are only allowed when system is in IDLE or HOMING states.
 
 const char* ssid = "Everwood";
 const char* password = "Everwood-Staff";
@@ -22,5 +24,9 @@ void setupOTA() {
 }
 
 void handleOTA() {
-  ArduinoOTA.handle();
+  // Only allow OTA uploads in IDLE or HOMING states
+  SystemState currentState = getCurrentState();
+  if (currentState == STATE_IDLE || currentState == STATE_HOMING) {
+    ArduinoOTA.handle();
+  }
 } 
