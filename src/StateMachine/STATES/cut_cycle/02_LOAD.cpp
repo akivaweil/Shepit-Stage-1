@@ -1,4 +1,5 @@
 #include "StateMachine.h"
+#include "LOAD_State.h"
 #include "Config.h"
 #include "Pins_Definitions.h"
 
@@ -24,12 +25,6 @@ static bool timeoutOccurred = false;
 static bool woodWasPresentAtStart = false;
 static bool waitingForWoodReset = false;
 static bool woodSensorDeactivated = false;
-
-//* ************************************************************************
-//* ************************ FORWARD DECLARATIONS ************************
-//* ************************************************************************
-void handleWoodSensorDeactivation();
-void handleWoodResetWaiting();
 
 //* ************************************************************************
 //* ************************ ENTER STATE ************************
