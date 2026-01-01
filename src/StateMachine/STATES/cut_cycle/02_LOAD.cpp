@@ -135,17 +135,19 @@ void updateLoadState() {
   }
   
   // Monitor wood presence during feeding
-  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered) {
+  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered && !woodSensorDeactivationTimerStarted) {
     if (!isWoodPresent()) {
       // Start timer when wood sensor first becomes inactive
       woodSensorDeactivationTime = millis();
       woodSensorDeactivationTimerStarted = true;
       
-      // Ensure motor keeps running during delay
-      if (feedMotor && !feedMotor->isRunning()) {
-        feedMotor->setSpeedInHz(feedMotorSpeed);
-        feedMotor->setAcceleration(feedMotorAcceleration);
-        feedMotor->runForward();
+      // Ensure motor keeps running during delay - explicitly start if not already running
+      if (feedMotor) {
+        if (!feedMotor->isRunning()) {
+          feedMotor->setSpeedInHz(feedMotorSpeed);
+          feedMotor->setAcceleration(feedMotorAcceleration);
+          feedMotor->runForward();
+        }
       }
       return;
     }
