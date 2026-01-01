@@ -88,15 +88,13 @@ void updateLoadState() {
     if (!isWoodPresent() && !waitingForWoodReset) {
       Serial.println("Wood sensor deactivated - feeding for extra " + String(woodSensorDeactivationDelay) + "ms");
       
-      // BLOCKING DELAY - ABSOLUTELY GUARANTEE motor runs for full duration
+      // BLOCKING DELAY - CONTINUOUSLY restart motor to guarantee it runs
       unsigned long startRunoff = millis();
       while (millis() - startRunoff < woodSensorDeactivationDelay) {
-          // FORCE motor to keep running - check every loop iteration
-          if (!feedMotor->isRunning()) {
-             feedMotor->setSpeedInHz(feedMotorSpeed);
-             feedMotor->setAcceleration(feedMotorAcceleration);
-             feedMotor->runForward();
-          }
+          // CONTINUOUSLY restart motor - don't just check, ALWAYS call runForward()
+          feedMotor->setSpeedInHz(feedMotorSpeed);
+          feedMotor->setAcceleration(feedMotorAcceleration);
+          feedMotor->runForward(); // Keep calling this to ensure it keeps running
           
           // Safety check for emergency stop
           updateRunCycleSwitch(); 
