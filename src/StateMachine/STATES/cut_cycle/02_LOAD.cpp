@@ -9,7 +9,6 @@
 // State-specific variables
 static unsigned long feedStartTime = 0;
 static unsigned long sensorTriggerTime = 0;
-static unsigned long woodSensorDeactivationTime = 0;
 static bool distanceSensorTriggered = false;
 static bool delayTimerStarted = false;
 static bool feedMotorRunning = false;
@@ -18,7 +17,6 @@ static bool timeoutOccurred = false;
 static bool woodWasPresentAtStart = false;
 static bool waitingForWoodReset = false;
 static bool woodSensorDeactivated = false;
-static bool woodSensorDeactivationTimerStarted = false;
 
 // Automatic unload constants
 static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;
@@ -26,7 +24,6 @@ static const int32_t AUTOMATIC_UNLOAD_STEPS = 5000;
 void enterLoadState() {
   feedStartTime = 0;
   sensorTriggerTime = 0;
-  woodSensorDeactivationTime = 0;
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
@@ -35,7 +32,6 @@ void enterLoadState() {
   woodWasPresentAtStart = false;
   waitingForWoodReset = false;
   woodSensorDeactivated = false;
-  woodSensorDeactivationTimerStarted = false;
   
   resetFeedMotorTimeoutLock();
   resetFeedMotorFlags();
@@ -91,12 +87,34 @@ void updateLoadState() {
     return;
   }
   
-  // Check if delay timer is already running - handle this FIRST before other checks
-  if (woodSensorDeactivationTimerStarted) {
-    // Continue feeding for configured delay before stopping
-    if (millis() - woodSensorDeactivationTime >= woodSensorDeactivationDelay) {
-      // Delay has elapsed - stop motor and unload
-      if (feedMotor && feedMotor->isRunning()) {
+  // Monitor wood presence during feeding
+  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered) {
+    if (!isWoodPresent()) {
+      Serial.println("Wood sensor deactivated - feeding for extra " + String(woodSensorDeactivationDelay) + "ms");
+      
+      // BLOCKING DELAY to ensure motor runs for the full duration
+      // This is "drastic" but ensures no other logic stops the motor
+      unsigned long startRunoff = millis();
+      while (millis() - startRunoff < woodSensorDeactivationDelay) {
+          // Ensure motor keeps running
+          if (feedMotor && !feedMotor->isRunning()) {
+             feedMotor->setSpeedInHz(feedMotorSpeed);
+             feedMotor->setAcceleration(feedMotorAcceleration);
+             feedMotor->runForward();
+          }
+          
+          // CRITICAL SAFETY CHECK: Allow emergency stop via Run Cycle Switch
+          updateRunCycleSwitch(); 
+          if (!isRunCycleSwitchActive()) {
+               emergencyStopFeedOperation();
+               return;
+          }
+          
+          delay(10); // Short delay to prevent watchdog issues
+      }
+      
+      // Stop motor and unload
+      if (feedMotor) {
         feedMotor->forceStop();
         feedMotorRunning = false;
       }
@@ -118,37 +136,8 @@ void updateLoadState() {
         
         waitingForWoodReset = true;
         woodSensorDeactivated = false;
-        woodSensorDeactivationTimerStarted = false;
       }
       
-      return;
-    } else {
-      // Delay hasn't elapsed yet - keep motor running and return early
-      // Ensure motor is still running
-      if (feedMotor && !feedMotor->isRunning()) {
-        feedMotor->setSpeedInHz(feedMotorSpeed);
-        feedMotor->setAcceleration(feedMotorAcceleration);
-        feedMotor->runForward();
-      }
-      return;
-    }
-  }
-  
-  // Monitor wood presence during feeding
-  if (feedMotorRunning && woodWasPresentAtStart && !distanceSensorTriggered && !woodSensorDeactivationTimerStarted) {
-    if (!isWoodPresent()) {
-      // Start timer when wood sensor first becomes inactive
-      woodSensorDeactivationTime = millis();
-      woodSensorDeactivationTimerStarted = true;
-      
-      // Ensure motor keeps running during delay - explicitly start if not already running
-      if (feedMotor) {
-        if (!feedMotor->isRunning()) {
-          feedMotor->setSpeedInHz(feedMotorSpeed);
-          feedMotor->setAcceleration(feedMotorAcceleration);
-          feedMotor->runForward();
-        }
-      }
       return;
     }
   }
@@ -243,7 +232,6 @@ void emergencyStopFeedOperation() {
 void exitLoadState() {
   feedStartTime = 0;
   sensorTriggerTime = 0;
-  woodSensorDeactivationTime = 0;
   distanceSensorTriggered = false;
   delayTimerStarted = false;
   feedMotorRunning = false;
@@ -252,7 +240,6 @@ void exitLoadState() {
   woodWasPresentAtStart = false;
   waitingForWoodReset = false;
   woodSensorDeactivated = false;
-  woodSensorDeactivationTimerStarted = false;
   
   resetFeedDistanceSensor();
   
@@ -260,4 +247,3 @@ void exitLoadState() {
     timeoutOccurred = false;
   }
 }
-
