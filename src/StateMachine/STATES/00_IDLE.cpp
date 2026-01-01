@@ -29,6 +29,9 @@ static const unsigned long CLAMP_STATE_CHANGE_DELAY = 100;
 static bool runCycleSwitchCycled = false;
 static bool lastRunCycleSwitchState = false;
 
+// Distance sensor edge detection - only trigger on rising edge
+static bool lastDistanceSensorState = false;
+
 void enterIdleState() {
   resetAllStateMachineFlags();
   enableAllMotors();
@@ -50,6 +53,10 @@ void enterIdleState() {
   // Track run cycle switch state for cycling requirement
   runCycleSwitchCycled = false;
   lastRunCycleSwitchState = isRunCycleSwitchActive();
+  
+  // Reset distance sensor and edge detection when entering IDLE
+  resetFeedDistanceSensor();
+  lastDistanceSensorState = isWoodAtCorrectDistance();
   
   if (feedMotor && feedMotor->isRunning()) {
     feedMotor->forceStop();
@@ -182,6 +189,14 @@ void updateIdleState() {
           delay(50); // Small delay to let motor start
           Serial.println("Feed motor isRunning check: " + String(feedMotor->isRunning() ? "TRUE" : "FALSE"));
           
+          // Reset distance sensor state tracking when feed motor starts
+          // This ensures we can detect rising edge when wood reaches sensor
+          lastDistanceSensorState = isWoodAtCorrectDistance();
+          
+          // Set run cycle switch cycled flag when feed motor starts
+          // This allows distance sensor to trigger cutting cycle
+          runCycleSwitchCycled = true;
+          
           if (currentSystemState != STATE_UNLOAD) {
             feedMotorStartTime = millis();
             feedMotorTimeoutOccurred = false;
@@ -254,8 +269,10 @@ void updateIdleState() {
   }
   
   // Distance sensor trigger for cutting cycle
+  // Only trigger on rising edge (transition from not triggered to triggered)
   // Only allow cutting cycle if run cycle switch has been cycled (off then on)
-  if (distanceSensorTriggered && runCycleActive && woodPresent && runCycleSwitchCycled) {
+  bool distanceSensorRisingEdge = distanceSensorTriggered && !lastDistanceSensorState;
+  if (distanceSensorRisingEdge && runCycleActive && woodPresent && runCycleSwitchCycled) {
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
       feedMotorTimeoutOccurred = false;
@@ -267,6 +284,9 @@ void updateIdleState() {
     transitionToState(STATE_CUTTING);
     return;
   }
+  
+  // Update last distance sensor state for edge detection
+  lastDistanceSensorState = distanceSensorTriggered;
   
   // Unload switch monitoring
   bool unloadSwitchActive = isUnloadSwitchActive();

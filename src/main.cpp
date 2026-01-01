@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WiFi.h>
 #include <FastAccelStepper.h>
 #include <Bounce2.h>
 #include "Config.h"
@@ -280,6 +281,9 @@ void setup() {
   Serial.println("Initializing OTA...");
   setupOTA();
   Serial.println("OTA initialization complete");
+  
+  // Display IP address
+  Serial.println("WiFi connected - IP address: " + WiFi.localIP().toString());
 
   //! ************************************************************************
   //! STEP 3: INITIALIZE ENABLE PINS

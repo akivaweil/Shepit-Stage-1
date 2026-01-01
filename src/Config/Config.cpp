@@ -13,6 +13,9 @@ const float feedMotorSteps = 1000.0;           // Steps per move (for manual com
 // Wood distance sensor delay
 const unsigned long woodDistanceDelay = 10;     // Milliseconds to wait after distance sensor triggered before cutting
 
+// Wood sensor deactivation delay
+const unsigned long woodSensorDeactivationDelay = 1000;  // Milliseconds to continue feeding after wood sensor deactivates
+
 // Feed motor timeout
 const unsigned long feedMotorTimeout = 5000;    // 5-second safety limit for feed motor operation
 
