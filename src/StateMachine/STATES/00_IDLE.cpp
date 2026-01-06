@@ -33,6 +33,10 @@ static bool lastRunCycleSwitchState = false;
 // Distance sensor edge detection - only trigger on rising edge
 static bool lastDistanceSensorState = false;
 
+// Wood sensor deactivation delay tracking
+static unsigned long woodSensorDeactivatedTime = 0;
+static bool woodSensorDeactivationPending = false;
+
 void enterIdleState() {
   resetAllStateMachineFlags();
   enableAllMotors();
@@ -46,6 +50,9 @@ void enterIdleState() {
   lastFeedMotorStateChange = 0;
   feedMotorTimeoutOccurred = false;
   resetFeedMotorTimeoutLock();
+  
+  woodSensorDeactivatedTime = 0;
+  woodSensorDeactivationPending = false;
   
   clampShouldBeRetracted = false;
   clampWasRetracted = false;
@@ -88,6 +95,33 @@ void updateIdleState() {
   
   // Feed motor runs when run cycle switch is ON and wood is present
   bool newFeedMotorShouldRun = runCycleActive && woodPresent && !inCuttingCycle && !isFeedMotorTimeoutLocked() && (currentSystemState != STATE_UNLOAD);
+  
+  // Handle wood sensor deactivation delay tracking
+  static bool lastWoodPresentForDelay = true;
+  if (woodPresent && !lastWoodPresentForDelay) {
+    // Wood sensor became active again - cancel any pending deactivation
+    woodSensorDeactivationPending = false;
+    woodSensorDeactivatedTime = 0;
+  } else if (!woodPresent && lastWoodPresentForDelay && feedMotor && feedMotor->isRunning()) {
+    // Wood sensor just deactivated while motor is running - start delay timer
+    if (!woodSensorDeactivationPending) {
+      woodSensorDeactivatedTime = millis();
+      woodSensorDeactivationPending = true;
+    }
+  }
+  
+  // Override newFeedMotorShouldRun to keep motor running during delay period
+  if (woodSensorDeactivationPending && runCycleActive && feedMotor && feedMotor->isRunning()) {
+    if (millis() - woodSensorDeactivatedTime < woodSensorDeactivationDelay) {
+      // Keep motor running during delay period
+      newFeedMotorShouldRun = true;
+    } else {
+      // Delay has elapsed, allow motor to stop
+      woodSensorDeactivationPending = false;
+    }
+  }
+  
+  lastWoodPresentForDelay = woodPresent;
   
   // Reset feed motor timeout lock when conditions change
   if (runCycleActive != lastRunCycleActive || woodPresent != lastWoodPresent) {
@@ -223,7 +257,7 @@ void updateIdleState() {
     }
   }
   
-  // Monitor conditions and stop feed motor immediately if they change
+  // Monitor conditions and stop feed motor immediately if run cycle switch turns off
   if (feedMotor && feedMotor->isRunning() && !inCuttingCycle && (currentSystemState != STATE_UNLOAD)) {
     if (!runCycleActive) {
       feedMotor->forceStop();
@@ -231,15 +265,7 @@ void updateIdleState() {
       feedMotorTimeoutOccurred = false;
       feedMotorShouldRun = false;
       lastFeedMotorStateChange = 0;
-      return;
-    }
-    
-    if (!woodPresent) {
-      feedMotor->forceStop();
-      feedMotorWasRunning = false;
-      feedMotorTimeoutOccurred = false;
-      feedMotorShouldRun = false;
-      lastFeedMotorStateChange = 0;
+      woodSensorDeactivationPending = false;
       return;
     }
   }
@@ -272,8 +298,10 @@ void updateIdleState() {
   // Distance sensor trigger for cutting cycle
   // Only trigger on rising edge (transition from not triggered to triggered)
   // Only allow cutting cycle if run cycle switch has been cycled (off then on)
+  // Allow transition during wood sensor deactivation delay period
   bool distanceSensorRisingEdge = distanceSensorTriggered && !lastDistanceSensorState;
-  if (distanceSensorRisingEdge && runCycleActive && woodPresent && runCycleSwitchCycled) {
+  bool woodConditionMet = woodPresent || woodSensorDeactivationPending;
+  if (distanceSensorRisingEdge && runCycleActive && woodConditionMet && runCycleSwitchCycled) {
     if (feedMotor && feedMotor->isRunning()) {
       feedMotor->forceStop();
       feedMotorTimeoutOccurred = false;
@@ -281,6 +309,9 @@ void updateIdleState() {
     
     // Reset cycling flag after starting cutting cycle
     runCycleSwitchCycled = false;
+    
+    // Cancel wood sensor deactivation delay since we're transitioning to cutting
+    woodSensorDeactivationPending = false;
     
     transitionToState(STATE_CUTTING);
     return;
@@ -319,6 +350,9 @@ void resetIdleFeedMotorControl(bool stopMotor) {
   lastFeedMotorStateChange = 0;
   feedMotorTimeoutOccurred = false;
   resetFeedMotorTimeoutLock();
+  
+  woodSensorDeactivatedTime = 0;
+  woodSensorDeactivationPending = false;
   
   clampShouldBeRetracted = false;
   clampWasRetracted = false;

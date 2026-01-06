@@ -31,7 +31,7 @@ void enterUnloadState() {
     enableAllMotors();
     retractForwardClamp();
     
-    // Start continuous backward movement
+    // Start continuous backward movement - runs endlessly while switch is held
     if (feedMotor) {
       feedMotor->setSpeedInHz(feedMotorSpeed);
       feedMotor->setAcceleration(feedMotorAcceleration);
@@ -82,9 +82,11 @@ void updateUnloadState() {
     }
   } else {
     // Manual unload mode: controlled by unload switch
+    // Motor reverses endlessly while switch is held
     bool unloadSwitchActive = digitalRead(UNLOAD_SWITCH_PIN) == HIGH;
     
     if (!unloadSwitchActive) {
+      // Switch released - stop motor and return to IDLE
       if (feedMotor && feedMotor->isRunning()) {
         feedMotor->forceStop();
         unloadMotorMoving = false;
@@ -95,8 +97,8 @@ void updateUnloadState() {
       return;
     }
     
-    // Keep motor running backward while switch is active
-    if (unloadMotorMoving && feedMotor && !feedMotor->isRunning()) {
+    // Keep motor running backward endlessly while switch is active
+    if (feedMotor && !feedMotor->isRunning()) {
       feedMotor->runBackward();
     }
   }

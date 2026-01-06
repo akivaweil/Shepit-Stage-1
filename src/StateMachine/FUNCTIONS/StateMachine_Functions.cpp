@@ -1,6 +1,7 @@
 #include "StateMachine.h"
 #include "Config.h"
 #include "Pins_Definitions.h"
+#include "WebDashboard.h"
 
 // External motor objects from main.cpp
 extern FastAccelStepper *feedMotor;
@@ -373,6 +374,7 @@ void updateStateMachine() {
 
 void initializeStateMachine() {
   Serial.println("=== INITIALIZING STATE MACHINE ===");
+  logToDashboard("=== INITIALIZING STATE MACHINE ===");
   
   // Initialize variables
   lastActivityTime = millis();
@@ -380,8 +382,10 @@ void initializeStateMachine() {
   
   // Initialize all sensors first
   Serial.println("Initializing sensors...");
+  logToDashboard("Initializing sensors...");
   initializeAllSensors();
   Serial.println("Sensor initialization complete");
+  logToDashboard("Sensor initialization complete");
   
   //! ************************************************************************
   //! STARTUP SAFETY CHECK: Check if run cycle switch is already ON at startup
@@ -391,11 +395,15 @@ void initializeStateMachine() {
   if (isRunCycleSwitchActive()) {
     startupSafetyResetRequired = true;
     Serial.println("⚠️  STARTUP SAFETY: Run cycle switch is ON at startup");
+    logToDashboard("⚠️  STARTUP SAFETY: Run cycle switch is ON at startup");
     Serial.println("⚠️  STARTUP SAFETY: Turn switch OFF then ON to reset safety");
+    logToDashboard("⚠️  STARTUP SAFETY: Turn switch OFF then ON to reset safety");
     Serial.println("⚠️  STARTUP SAFETY: No automatic cycles until reset");
+    logToDashboard("⚠️  STARTUP SAFETY: No automatic cycles until reset");
   } else {
     startupSafetyResetRequired = false;
     Serial.println("✓ STARTUP SAFETY: Run cycle switch is OFF - system ready");
+    logToDashboard("✓ STARTUP SAFETY: Run cycle switch is OFF - system ready");
   }
   
   // Start in homing state
@@ -406,6 +414,7 @@ void initializeStateMachine() {
   enterHomingState();
   
   Serial.println("State machine initialized - starting in HOMING state");
+  logToDashboard("State machine initialized - starting in HOMING state");
 }
 
 //* ************************************************************************

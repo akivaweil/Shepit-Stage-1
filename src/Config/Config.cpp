@@ -34,8 +34,8 @@ const float cutMotorAcceleration = 30000.0;    // Steps per second^2
 const float cutMotorSteps = 3500.0;            // Steps per move
 
 // Cut motor return parameters
-const float cutMotorReturnSpeed = 30000.0;      // Steps per second 
-const float cutMotorReturnAcceleration = 35000.0; // Steps per second^2
+const float cutMotorReturnSpeed = 20000.0;      // Steps per second 
+const float cutMotorReturnAcceleration = 20000.0; // Steps per second^2
 
 // Cut motor offset after homing
 const float cutMotorOffsetAfterHomingInches = 0.2;  // Move 0.5 inches away from home after homing

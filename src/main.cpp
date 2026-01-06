@@ -5,6 +5,7 @@
 #include "Config.h"
 #include "Pins_Definitions.h"
 #include "StateMachine.h"
+#include "WebDashboard.h"
 
 //* ************************************************************************
 //* ********************* DUAL MOTOR CONTROL MAIN *************************
@@ -18,6 +19,10 @@
 // External OTA functions
 extern void setupOTA();
 extern void handleOTA();
+
+// External Web Dashboard functions
+extern void setupWebDashboard();
+extern void handleWebDashboard();
 
 //* ************************************************************************
 //* *********************** MOTOR OBJECTS *********************************
@@ -274,21 +279,37 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   Serial.println("=== DUAL MOTOR CONTROL SYSTEM STARTING ===");
+  logToDashboard("=== DUAL MOTOR CONTROL SYSTEM STARTING ===");
 
   //! ************************************************************************
   //! STEP 2: INITIALIZE OTA FUNCTIONALITY
   //! ************************************************************************
   Serial.println("Initializing OTA...");
+  logToDashboard("Initializing OTA...");
   setupOTA();
   Serial.println("OTA initialization complete");
+  logToDashboard("OTA initialization complete");
   
   // Display IP address
-  Serial.println("WiFi connected - IP address: " + WiFi.localIP().toString());
+  String ipMsg = "WiFi connected - IP address: " + WiFi.localIP().toString();
+  Serial.println(ipMsg);
+  logToDashboard(ipMsg);
+  
+  //! ************************************************************************
+  //! STEP 2.5: INITIALIZE WEB DASHBOARD
+  //! ************************************************************************
+  Serial.println("Initializing web dashboard...");
+  logToDashboard("Initializing web dashboard...");
+  setupWebDashboard();
+  String dashboardMsg = "Web dashboard available at http://" + WiFi.localIP().toString();
+  Serial.println(dashboardMsg);
+  logToDashboard(dashboardMsg);
 
   //! ************************************************************************
   //! STEP 3: INITIALIZE ENABLE PINS
   //! ************************************************************************
   Serial.println("Setting up motor enable pins...");
+  logToDashboard("Setting up motor enable pins...");
   pinMode(FEED_MOTOR_ENABLE_PIN, OUTPUT);
   pinMode(CUT_MOTOR_ENABLE_PIN, OUTPUT);
   
@@ -296,31 +317,38 @@ void setup() {
   digitalWrite(FEED_MOTOR_ENABLE_PIN, LOW);  // Active low enable
   digitalWrite(CUT_MOTOR_ENABLE_PIN, LOW);   // Active low enable
   Serial.println("Motors enabled on startup - sleep mode after 3 seconds of idle");
+  logToDashboard("Motors enabled on startup - sleep mode after 3 seconds of idle");
 
   //! ************************************************************************
   //! STEP 4: INITIALIZE BUTTON WITH PULLDOWN (ACTIVE HIGH)
   //! ************************************************************************
   Serial.println("Setting up button control...");
+  logToDashboard("Setting up button control...");
   button.attach(BUTTON_PIN, INPUT_PULLDOWN);
   button.interval(buttonDebounceTime);
   Serial.println("Button setup complete");
+  logToDashboard("Button setup complete");
 
   //! ************************************************************************
   //! STEP 5: INITIALIZE PNEUMATIC CLAMP RELAY
   //! ************************************************************************
   Serial.println("Setting up pneumatic clamp relay...");
+  logToDashboard("Setting up pneumatic clamp relay...");
   pinMode(CLAMP_RELAY_PIN, OUTPUT);
   extendForwardClamp(); // Start with forward clamp extended (ready position)
   Serial.println("Pneumatic clamp initialized - starting in extended position");
+  logToDashboard("Pneumatic clamp initialized - starting in extended position");
 
   //! ************************************************************************
   //! STEP 6: INITIALIZE STEPPER MOTOR ENGINE AND CREATE MOTORS
   //! ************************************************************************
   Serial.println("Initializing stepper motor engine...");
+  logToDashboard("Initializing stepper motor engine...");
   engine.init();
   
   // Create feed motor instance
   Serial.println("Setting up feed motor...");
+  logToDashboard("Setting up feed motor...");
   feedMotor = engine.stepperConnectToPin(FEED_MOTOR_STEP_PIN);
   if (feedMotor) {
     feedMotor->setDirectionPin(FEED_MOTOR_DIR_PIN);
@@ -331,14 +359,21 @@ void setup() {
     // Set current position to 0 for reference
     feedMotor->setCurrentPosition(0);
     Serial.println("Feed motor configured successfully");
-    Serial.println("Feed motor speed: " + String(feedMotorSpeed) + " Hz");
-    Serial.println("Feed motor acceleration: " + String(feedMotorAcceleration) + " steps/s²");
+    logToDashboard("Feed motor configured successfully");
+    String feedSpeedMsg = "Feed motor speed: " + String(feedMotorSpeed) + " Hz";
+    Serial.println(feedSpeedMsg);
+    logToDashboard(feedSpeedMsg);
+    String feedAccelMsg = "Feed motor acceleration: " + String(feedMotorAcceleration) + " steps/s²";
+    Serial.println(feedAccelMsg);
+    logToDashboard(feedAccelMsg);
   } else {
     Serial.println("ERROR: Failed to create feed motor instance");
+    logToDashboard("ERROR: Failed to create feed motor instance");
   }
 
   // Create cut motor instance
   Serial.println("Setting up cut motor...");
+  logToDashboard("Setting up cut motor...");
   cutMotor = engine.stepperConnectToPin(CUT_MOTOR_STEP_PIN);
   if (cutMotor) {
     cutMotor->setDirectionPin(CUT_MOTOR_DIR_PIN);
@@ -349,20 +384,29 @@ void setup() {
     // Set current position to 0 for reference
     cutMotor->setCurrentPosition(0);
     Serial.println("Cut motor configured successfully");
-    Serial.println("Cut motor speed: " + String(cutMotorSpeed) + " Hz");
-    Serial.println("Cut motor acceleration: " + String(cutMotorAcceleration) + " steps/s²");
+    logToDashboard("Cut motor configured successfully");
+    String cutSpeedMsg = "Cut motor speed: " + String(cutMotorSpeed) + " Hz";
+    Serial.println(cutSpeedMsg);
+    logToDashboard(cutSpeedMsg);
+    String cutAccelMsg = "Cut motor acceleration: " + String(cutMotorAcceleration) + " steps/s²";
+    Serial.println(cutAccelMsg);
+    logToDashboard(cutAccelMsg);
   } else {
     Serial.println("ERROR: Failed to create cut motor instance");
+    logToDashboard("ERROR: Failed to create cut motor instance");
   }
 
   //! ************************************************************************
   //! STEP 7: INITIALIZE STATE MACHINE (AFTER MOTORS ARE CREATED)
   //! ************************************************************************
   Serial.println("Initializing state machine...");
+  logToDashboard("Initializing state machine...");
   initializeStateMachine();
 
   Serial.println("=== SYSTEM READY - WAITING FOR BUTTON PRESS ===");
+  logToDashboard("=== SYSTEM READY - WAITING FOR BUTTON PRESS ===");
   Serial.println("Type 'help' for available serial commands");
+  logToDashboard("Type 'help' for available serial commands");
   delay(1000);
 }
 
@@ -375,6 +419,11 @@ void loop() {
   //! ************************************************************************
   handleOTA();
 
+  //! ************************************************************************
+  //! STEP 1.5: HANDLE WEB DASHBOARD
+  //! ************************************************************************
+  handleWebDashboard();
+  
   //! ************************************************************************
   //! STEP 2: PROCESS SERIAL COMMANDS
   //! ************************************************************************
